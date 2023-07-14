@@ -1,0 +1,40 @@
+innvestigate.analyzer
+=====================
+
+Interface and base code
+-----------------------
+
+.. automodule:: innvestigate.analyzer.base
+   :members:
+   :undoc-members:
+
+Gradient methods
+----------------
+
+.. automodule:: innvestigate.analyzer.gradient_based
+   :members:
+   :undoc-members:
+
+
+Layer-wise relevance propagation
+--------------------------------
+
+.. automodule:: innvestigate.analyzer.relevance_based.relevance_analyzer
+   :members:
+   :undoc-members:
+
+
+Deep Taylor
+---------------
+
+.. automodule:: innvestigate.analyzer.deeptaylor
+   :members:
+   :undoc-members:
+
+
+Misc
+---------------
+
+.. automodule:: innvestigate.analyzer.misc
+   :members:
+   :undoc-members:

@@ -1,0 +1,163 @@
+[tool.poetry]
+name = "innvestigate"
+version = "2.1.0"
+description = "A toolbox to innvestigate neural networks' predictions."
+classifiers = [
+    "License :: OSI Approved :: BSD License",
+    "Development Status :: 5 - Production/Stable",
+    "Environment :: Console", 
+    "Intended Audience :: Science/Research",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+authors = [
+    "Maxmilian Alber <workDoTalberDoTmaximilian@gmail.com>",
+    "Adrian Hill <hill@tu-berlin.de>",
+    "Sebastian Lapuschkin",
+    "Miriam Haegele",
+    "Kristof Schuett",
+    "Philipp Seegerer",
+    "Pieter-Jan Kindermans",
+    "Henry Webel",
+    "Leander Weber",
+    "and others",
+]
+maintainers = ["Adrian Hill <hill@tu-berlin.de>"]
+license = "BSD-2-Clause"
+readme = "README.md"
+homepage = "https://github.com/albermax/innvestigate"
+repository = "https://github.com/albermax/innvestigate"
+documentation = "https://innvestigate.readthedocs.io/en/latest/"
+keywords = ["XAI", "LRP", "Deep Taylor",]
+
+[tool.poetry.dependencies]
+python = ">=3.8, <3.12"
+tensorflow = ">=2.6, <2.13"
+numpy = ">=1.22, <2"
+matplotlib = ">=3.5, <4"
+future = ">=0.18, <0.19"
+
+[tool.poetry.group.notebooks.dependencies]
+ipykernel = ">=6.19, <7"
+Pillow = ">=9.0, <10"
+ftfy = ">=6.1, <7"
+pandas = ">=1, <3"
+
+[tool.poetry.group.docs.dependencies]
+Sphinx = ">=6.1, <8"
+
+[tool.poetry.group.tests.dependencies]
+pytest = ">=7.2, <8"
+pytest-cov = ">=4.0, <5"
+coverage = {extras = ["toml"], version = ">=7, <8"}
+codecov = ">=2.1, <3"
+
+[tool.poetry.group.dev.dependencies]
+black  = ">=22.3, <24"
+ruff = ">=0.0.264, <0.1"
+rope = ">=1.6, <2"
+pylint = ">=2.12, <3"
+isort = ">=5.10, <6"
+mypy = ">=1, <2"
+vulture = ">=2.3, <3"
+pyupgrade = ">=3.3, <4"
+pre-commit = ">=2.19, <4"
+
+[tool.isort]
+profile = "black"
+multi_line_output = 3 
+known_first_party = "innvestigate"
+known_local_folder = "tests"
+
+[tool.pytest.ini_options]
+addopts = "-v -m fast --strict-markers --cov"
+# NOTE: locally run tests with `poetry run pytest -m precommit` before a commit 
+markers = [
+    "precommit",
+    "slow",
+    "fast",
+    "local",
+    "graph",
+    "application",
+    "mnist",
+    "reference",
+    "layer",
+    "ilayers",
+    "vgg16",
+    "imagenet",
+    "resnet50",
+    "base",
+    "deeptaylor",
+    "gradient",
+    "init",
+    "lrp",
+    "wrapper",
+    "perturbate",
+]
+
+[tool.coverage.paths]
+source = ["src", "*/site-packages"]
+
+[tool.coverage.run]
+branch = true
+source = ["innvestigate"]
+
+[tool.coverage.report]
+show_missing = false
+
+[tool.ruff]
+select = [
+    "A", # flake8-builtins
+    "B", # flake8-bugbear
+    "E", # pycodestyle / PEP8
+    "F", # pyflakes
+    "I", # flake8-isort
+    "W", # pycodestyle / PEP8
+]
+ignore = [
+    "E741", # Ignore warning "ambiguous variable name 'l'" as it is useful to iterate over layers
+    "B905", # zip's `strict` parameter was only added in Python 3.10
+]
+
+[tool.pylint."messages control"]
+disable = [
+    "raw-checker-failed", 
+    "bad-inline-option", 
+    "locally-disabled", 
+    "file-ignored", 
+    "suppressed-message", 
+    "useless-suppression", 
+    "deprecated-pragma", 
+    "use-symbolic-message-instead",
+    "no-name-in-module",
+    "missing-module-docstring", 
+    "missing-class-docstring", 
+    "missing-function-docstring", 
+    "too-few-public-methods",
+]
+
+[tool.pylint.basic]
+good-names = ["i", "j", "k", "l", "n", "x", "y", "a", "b", "ex", "Run", "_"]
+good-names-rgxs = ["(.*_)?[XYZRABC]s?"]
+
+[tool.mypy]
+files = "src/innvestigate"
+pretty = true
+show_error_codes = true
+warn_return_any = true
+warn_unused_configs = true
+
+[[tool.mypy.overrides]]
+module = [
+    "tensorflow.*",
+]
+ignore_missing_imports = true
+
+# Build with Poetry
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
