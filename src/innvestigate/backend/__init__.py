@@ -80,6 +80,7 @@ def gradients(
         )
 
     grad = tf.gradients(Ys, Xs, grad_ys=known_Ys, stop_gradients=Xs)
+    # grad = tf.GradientTape(Ys, Xs, grad_ys=known_Ys, stop_gradients=Xs)
     if grad is None:
         raise TypeError("Gradient computation failed, returned None.")
     return to_list(grad)

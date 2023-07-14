@@ -8,6 +8,7 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 import tensorflow as tf
+import tempfile
 import tensorflow_hub as hub
 import matplotlib.pyplot as plot
 
@@ -20,9 +21,15 @@ from sklearn.model_selection import train_test_split
 from sklearn.calibration import calibration_curve
 from tensorflow.keras import layers
 import src.innvestigate as innvestigate
+from PIL import Image
 
 from tool import *
 
+config = tf.compat.v1.ConfigProto()
+config.gpu_options.allow_growth = True
+session = tf.compat.v1.InteractiveSession(config=config)
+
+tf.compat.v1.disable_eager_execution()
 
 physical_devices = tf.config.list_physical_devices('GPU')
 tf.config.experimental.set_memory_growth(physical_devices[0], True)
@@ -159,9 +166,9 @@ def create_dataset(filenames, labels, is_training=True):
 train_ds = create_dataset(X_train, y_train_bin)
 val_ds = create_dataset(X_val, y_val_bin)
 
-for f, l in train_ds.take(1):
-    print("Shape of features array:", f.numpy().shape)
-    print("Shape of labels array:", l.numpy().shape)
+# for f, l in train_ds.take(1):
+#     print("Shape of features array:", f.numpy().shape)
+#     print("Shape of labels array:", l.numpy().shape)
 
 conv_base = VGG16(weights='imagenet',
                   include_top=False,
@@ -230,17 +237,17 @@ model_bce = tf.keras.Sequential([
 
 model_bce.summary()
 
-# model_bce.compile(
-#     optimizer='rmsprop',
-#     loss=tf.keras.metrics.binary_crossentropy,
-#     metrics=[macro_f1, 'accuracy'])
-#
-# history_bce = model_bce.fit(train_ds,
-#                             epochs=EPOCHS,
-#                             validation_data=create_dataset(X_val, y_val_bin))
-# model_bce_losses, model_bce_val_losses, model_bce_macro_f1s, model_bce_val_macro_f1s = learning_curves(history_bce)
-# print("Macro soft-F1 loss: %.2f" %model_bce_val_losses[-1])
-# print("Macro F1-score: %.2f" %model_bce_val_macro_f1s[-1])
+model_bce.compile(
+    optimizer='rmsprop',
+    loss=tf.keras.metrics.binary_crossentropy,
+    metrics=[macro_f1, 'accuracy'])
+
+history_bce = model_bce.fit(train_ds,
+                            epochs=EPOCHS,
+                            validation_data=create_dataset(X_val, y_val_bin))
+model_bce_losses, model_bce_val_losses, model_bce_macro_f1s, model_bce_val_macro_f1s = learning_curves(history_bce)
+print("Macro soft-F1 loss: %.2f" %model_bce_val_losses[-1])
+print("Macro F1-score: %.2f" %model_bce_val_macro_f1s[-1])
 
 # # Get all label names
 # label_names = mlb.classes_
@@ -258,27 +265,70 @@ model_bce.summary()
 #
 # top5 = max_perf.head(5)['id']
 
-dataset_list = list(val_ds)
-first_batch = dataset_list[0]
-filenames = first_batch[0]  # 获取第一个批次的所有文件名
-first_filename = filenames[0]  # 获取第一个文件名
-plot.imshow(first_filename, cmap="gray", interpolation="nearest")
-plot.show()
+
+
+# dataset_list = list(val_ds)
+# first_batch = dataset_list[0]
+# filenames = first_batch[0]  # 获取第一个批次的所有图片
+# first_filename = filenames[0]  # 获取第一个图片
+# plot.imshow(first_filename, cmap="gray", interpolation="nearest")
+# plot.show()
+
+filename = X_val[0]
+# Read an image from a file
+image_string = tf.io.read_file(filename)
+# Decode it into a dense vector 解码后的图像数据是一个张量
+image_decoded = tf.image.decode_jpeg(image_string, channels=CHANNELS)
+# Resize it to fixed shape
+image_resized = tf.image.resize(image_decoded, [IMG_SIZE, IMG_SIZE])
+# Normalize it from [0, 255] to [0.0, 1.0]
+image_normalized = image_resized / 255.0
+image = Image.open(filename)
+image_resized = image.resize((100, 100))
+# image_resized.show()
+plt.imshow(image_resized, cmap="gray", interpolation="nearest")
+plt.show()
+image_normalized_expanded = tf.expand_dims(image_normalized, axis=0)
 
 # Stripping the softmax activation from the model
 model_wo_sm = innvestigate.model_wo_softmax(model_bce)
 # Creating a parameterized analyzer
-abs_gradient_analyzer = innvestigate.create_analyzer(
-    "gradient", model_wo_sm, postprocess="abs"
-)
-square_gradient_analyzer = innvestigate.create_analyzer(
-    "gradient", model_wo_sm, postprocess="square"
-)
+gradient_analyzer = innvestigate.analyzer.Gradient(model_wo_sm)
+# abs_gradient_analyzer = innvestigate.create_analyzer(
+#     "gradient", model_wo_sm, postprocess="abs"
+# )
+# square_gradient_analyzer = innvestigate.create_analyzer(
+#     "gradient", model_wo_sm, postprocess="square"
+# )
+
 # Applying the analyzers
-abs_analysis = abs_gradient_analyzer.analyze(image)
-square_analysis = square_gradient_analyzer.analyze(image)
+analysis = gradient_analyzer.analyze(image_normalized_expanded)
+# abs_analysis = abs_gradient_analyzer.analyze(image_normalized_expanded)
+# square_analysis = square_gradient_analyzer.analyze(image_normalized_expanded)
+
 # Displaying the analyses, use gray map as there no negative values anymore
-plot.imshow(abs_analysis.squeeze(), cmap="gray", interpolation="nearest")
+analysis_add = analysis + 1
+# 找到图像数据的最小值和最大值
+min_value = np.min(analysis_add)
+max_value = np.max(analysis_add)
+# 将图像数据映射到0-1的区间内
+normalized_image = ((analysis_add - min_value) / (max_value - min_value))
+plot.imshow(normalized_image.squeeze(), cmap="seismic", interpolation="nearest")
 plot.show()
-plot.imshow(square_analysis.squeeze(), cmap="gray", interpolation="nearest")
-plot.show()
+# plot.imshow(abs_analysis.squeeze(), cmap="gray", interpolation="nearest")
+# plot.show()
+# plot.imshow(square_analysis.squeeze(), cmap="gray", interpolation="nearest")
+# plot.show()
+
+# # Creating an analyzer and set neuron_selection_mode to "index"
+# inputXgradient_analyzer = innvestigate.create_analyzer(
+#     "input_t_gradient", model_wo_sm, neuron_selection_mode="index"
+# )
+# for neuron_index in range(10):
+#     print("Analysis w.r.t. to neuron", neuron_index)
+#     # Applying the analyzer and pass that we want
+#     analysis = inputXgradient_analyzer.analyze(image, neuron_index)
+#
+#     # Displaying the gradient
+#     plot.imshow(analysis.squeeze(), cmap="seismic", interpolation="nearest")
+#     plot.show()

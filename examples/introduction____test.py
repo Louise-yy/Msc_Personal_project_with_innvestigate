@@ -58,7 +58,7 @@ scores = mnistutils.train_model(model, data, batch_size=128, epochs=2)
 print("Scores on test set: loss=%s accuracy=%s" % tuple(scores))
 
 # Choosing a test image for the tutorial:
-image = data[2][7:8]
+image = data[2][8:9]
 plot.imshow(image.squeeze(), cmap="gray", interpolation="nearest")
 plot.show()
 
