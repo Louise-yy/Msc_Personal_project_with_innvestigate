@@ -33,6 +33,8 @@ from joblib import Parallel, delayed
 from time import time
 from tqdm import tqdm
 
+from sklearn.metrics import f1_score
+
 
 def download_parallel(movies, image_dir):
     """Downloads images from Internet in parallel.
@@ -265,7 +267,7 @@ def perf_grid(ds, target, label_names, model, n_thresh=100):
     # Get label indexes
     label_index = [i for i in range(len(label_names))]
     # Define thresholds
-    thresholds = np.linspace(0,1,n_thresh+1).astype(np.float32)
+    thresholds = np.linspace(0, 1, n_thresh+1).astype(np.float32)
     
     # Compute all metrics for all labels
     ids, labels, freqs, tps, fps, fns, precisions, recalls, f1s = [], [], [], [], [], [], [], [], []
@@ -273,16 +275,18 @@ def perf_grid(ds, target, label_names, model, n_thresh=100):
         for thresh in thresholds:   
             ids.append(l)
             labels.append(label_names[l])
-            freqs.append(round(label_freq[l]/len(y_val),2))
-            y_hat = y_hat_val[:,l]
-            y = y_val[:,l]
-            y_pred = y_hat > thresh
+            f = round(label_freq[l]/len(y_val),2)
+            freqs.append(f)
+            y_hat = y_hat_val[:, l]  # prediction数值
+            y = y_val[:, l]  # label
+            y_pred = y_hat > thresh  # 是一个boolean值
             tp = np.count_nonzero(y_pred  * y)
             fp = np.count_nonzero(y_pred * (1-y))
             fn = np.count_nonzero((1-y_pred) * y)
             precision = tp / (tp + fp + 1e-16)
             recall = tp / (tp + fn + 1e-16)
-            f1 = 2*tp / (2*tp + fn + fp + 1e-16)
+            # f1 = 2*tp / (2*tp + fn + fp + 1e-16)
+            f1 = 2*precision*recall/(precision+recall+1e-16)
             tps.append(tp)
             fps.append(fp)
             fns.append(fn)

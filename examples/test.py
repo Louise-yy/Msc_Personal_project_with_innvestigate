@@ -1,6 +1,7 @@
-import logging
+# 产图的
 import os
 import warnings
+import logging
 
 import matplotlib.pyplot as plt
 import matplotlib.style as style
@@ -25,6 +26,7 @@ from PIL import Image
 
 from tool import *
 
+# 前期设定
 config = tf.compat.v1.ConfigProto()
 config.gpu_options.allow_growth = True
 session = tf.compat.v1.InteractiveSession(config=config)
@@ -38,10 +40,10 @@ warnings.filterwarnings('ignore')
 logging.getLogger("tensorflow").setLevel(logging.ERROR)
 print("TF version:", tf.__version__)
 
+# 开始处理所有的数据
 df = pd.read_csv("file/label_special_form.csv")
 # Get label frequencies in descending order
 label_freq = df['all_nouns'].apply(lambda s: str(s).split(',')).explode().value_counts().sort_values(ascending=False)
-
 # # Bar plot
 # style.use("fivethirtyeight")
 # plt.figure(figsize=(12, 10))
@@ -55,28 +57,22 @@ label_freq = df['all_nouns'].apply(lambda s: str(s).split(',')).explode().value_
 # Create a list of rare labels 只是要过一遍这个流程，不然shape会不对
 rare = list(label_freq[label_freq < 2].index)
 print("We will be ignoring these rare labels:", rare)
-
 # Transform all_nouns into a list of labels and remove the rare ones
 df['all_nouns'] = df['all_nouns'].apply(lambda s: [l for l in str(s).split(',') if l not in rare])
 print(df.head())
 print("Number of sample:", len(df))
-
 # 分成训练集和测试集
 X_train, X_val, y_train, y_val = train_test_split(df['stop_frame'], df['all_nouns'], test_size=0.2, random_state=44)
 print("Number of posters for training: ", len(X_train))
 print("Number of posters for validation: ", len(X_val))
-
-# 处理图片数据，把每个图片的路径前面都加上data/使路径变得完整
+# 把每个图片的路径前面都加上data/使路径变得完整
 X_train = [os.path.join('data', str(f)) for f in X_train]
 X_val = [os.path.join('data', str(f)) for f in X_val]
 print("X_train[:8]:", X_train[:8])
-
-# 处理标签数据
+# 把标签数据变成list的格式
 y_train = list(y_train)
 y_val = list(y_val)
 print("y_train[:8]:", y_train[:8])
-
-
 # nobs = 8  # Maximum number of images to display
 # ncols = 4  # Number of columns in display
 # nrows = nobs//ncols  # Number of rows in display
@@ -91,10 +87,12 @@ print("y_train[:8]:", y_train[:8])
 # plt.show()
 
 # Fit the multi-label binarizer on the training set 在训练集上拟合多标签二值化器
-print("Labels:")
+# 构建一个mlb实例
 mlb = MultiLabelBinarizer()
 mlb.fit(y_train)
+# 将label从string映射成数字
 
+print("Labels:")
 # Loop over all labels and show them
 N_LABELS = len(mlb.classes_)
 for (i, label) in enumerate(mlb.classes_):
@@ -110,7 +108,7 @@ print("y_val_bin.shape:", y_val_bin.shape)
 for i in range(3):
     print(X_train[i], y_train_bin[i])
 
-IMG_SIZE = 100  # 100
+IMG_SIZE = 100  # Specify height and width of image to match the input format of the model
 CHANNELS = 3  # Keep RGB color channels to match the input format of the model
 
 
@@ -131,7 +129,7 @@ def parse_function(filename, label):
     return image_normalized, label
 
 
-BATCH_SIZE = 8  # 8
+BATCH_SIZE = 8  # Big enough to measure an F1-score
 AUTOTUNE = tf.data.experimental.AUTOTUNE  # Adapt preprocessing and prefetching dynamically
 SHUFFLE_BUFFER_SIZE = 1024  # Shuffle the training data by a chunck of 1024 observations
 
@@ -166,94 +164,77 @@ def create_dataset(filenames, labels, is_training=True):
 train_ds = create_dataset(X_train, y_train_bin)
 val_ds = create_dataset(X_val, y_val_bin)
 
-# for f, l in train_ds.take(1):
-#     print("Shape of features array:", f.numpy().shape)
-#     print("Shape of labels array:", l.numpy().shape)
+# 导入训练好的模型
+model_bce = tf.keras.models.load_model("DL_no_macrof1.keras")
 
-conv_base = VGG16(weights='imagenet',
-                  include_top=False,
-                  input_shape=(IMG_SIZE, IMG_SIZE, CHANNELS))
-conv_base.trainable = False
+# # 选择图片
+# img_path = X_val[0]
+# labels = y_val[0]
+# # Read and prepare image
+# img = image.load_img(img_path, target_size=(IMG_SIZE, IMG_SIZE, CHANNELS))
+# plt.imshow(img)
+# plt.show()
+# img = image.img_to_array(img)
+# img = img / 255
+# img = np.expand_dims(img, axis=0)
+# predict = model_bce.predict(img)
 
-# feature_extractor_url = "https://tfhub.dev/google/imagenet/mobilenet_v2_100_224/feature_vector/4"
-# feature_extractor_layer = hub.KerasLayer(feature_extractor_url,
-#                                          input_shape=(IMG_SIZE, IMG_SIZE, CHANNELS))
-# feature_extractor_layer.trainable = False
+# im = Image.open(img_path)
 
-# @tf.function
-# def macro_soft_f1(y, y_hat):
-#     """Compute the macro soft F1-score as a cost (average 1 - soft-F1 across all labels).
-#     Use probability values instead of binary predictions.
+
+
+# Generate prediction
+# prediction = (predict > 0.5).astype('int')
+d = pd.read_csv("file/threshold.csv")
+threshold = d['threshold']
+
+
+def get_per_prediction(img_path):
+    print("img_path: ", img_path)
+    img = image.load_img(img_path, target_size=(IMG_SIZE, IMG_SIZE, CHANNELS))
+    plt.imshow(img)
+    plt.show()
+    img = image.img_to_array(img)
+    img = img / 255
+    img = np.expand_dims(img, axis=0)
+    predict = model_bce.predict(img)
+    print("predict number:", predict)
+    per_img_prediction = []
+    for i in range(20):
+        v = predict[0, i]
+        t = d.loc[d['id'] == i, 'threshold'].values[0]
+        if v >= t:
+            per_img_prediction.append(int(1))
+        else:
+            per_img_prediction.append(int(0))
+    print("predict boolean:", per_img_prediction)
+
+    per_img_prediction = pd.Series(per_img_prediction)
+    per_img_prediction.index = mlb.classes_
+    per_img_prediction_noun = per_img_prediction[per_img_prediction == 1].index.values
+    print("predict noun:", per_img_prediction_noun)
+    return per_img_prediction_noun
+
+
+# 这只是得到了一个图片的prediction
+test = get_per_prediction(X_val[1])
+print(test)
+
+# prediction_list = []
+# for x in X_val:
+#     per_prediction = get_per_prediction(x)
+#     prediction_list.append(per_prediction)
 #
-#     Args:
-#         y (int32 Tensor): targets array of shape (BATCH_SIZE, N_LABELS)
-#         y_hat (float32 Tensor): probability matrix from forward propagation of shape (BATCH_SIZE, N_LABELS)
+# print(prediction_list)
+# # 创建 DataFrame
+# df = pd.DataFrame({
+#     'frame': X_val,
+#     'predict': b,
+#     'label': y_val_bin,
+#     'result': d
+# })
 #
-#     Returns:
-#         cost (scalar Tensor): value of the cost function for the batch
-#     """
-#     y = tf.cast(y, tf.float32)
-#     y_hat = tf.cast(y_hat, tf.float32)
-#     tp = tf.reduce_sum(y_hat * y, axis=0)
-#     fp = tf.reduce_sum(y_hat * (1 - y), axis=0)
-#     fn = tf.reduce_sum((1 - y_hat) * y, axis=0)
-#     soft_f1 = 2 * tp / (2 * tp + fn + fp + 1e-16)
-#     cost = 1 - soft_f1  # reduce 1 - soft-f1 in order to increase soft-f1
-#     macro_cost = tf.reduce_mean(cost)  # average on all labels
-#     return macro_cost
-
-
-@tf.function
-def macro_f1(y, y_hat, thresh=0.5):
-    """Compute the macro F1-score on a batch of observations (average F1 across labels)
-
-    Args:
-        y (int32 Tensor): labels array of shape (BATCH_SIZE, N_LABELS)
-        y_hat (float32 Tensor): probability matrix from forward propagation of shape (BATCH_SIZE, N_LABELS)
-        thresh: probability value above which we predict positive
-
-    Returns:
-        macro_f1 (scalar Tensor): value of macro F1 for the batch
-    """
-    y_pred = tf.cast(tf.greater(y_hat, thresh), tf.float32)
-    tp = tf.cast(tf.math.count_nonzero(y_pred * y, axis=0), tf.float32)
-    fp = tf.cast(tf.math.count_nonzero(y_pred * (1 - y), axis=0), tf.float32)
-    fn = tf.cast(tf.math.count_nonzero((1 - y_pred) * y, axis=0), tf.float32)
-    f1 = 2 * tp / (2 * tp + fn + fp + 1e-16)
-    macro_f1 = tf.reduce_mean(f1)
-    return macro_f1
-
-
-LR = 1e-5  # Keep it small when transfer learning
-EPOCHS = 10
-model_bce = tf.keras.Sequential([
-    conv_base,
-    layers.Flatten(),
-    layers.Dense(1024, activation='relu', name='hidden_layer'),
-    layers.Dense(N_LABELS, activation='sigmoid', name='output')
-    # layers.Dense(N_LABELS, activation='sigmoid')
-])
-
-model_bce.summary()
-
-model_bce.compile(
-    optimizer='rmsprop',
-    loss=tf.keras.metrics.binary_crossentropy,
-    metrics=['accuracy'])
-
-callbacks = [
-    tf.keras.callbacks.ModelCheckpoint(
-        filepath="DL_no_macrof1.keras",
-        save_best_only=True,
-        monitor="val_loss")
-]
-history_bce = model_bce.fit(train_ds,
-                            epochs=EPOCHS,
-                            validation_data=create_dataset(X_val, y_val_bin),
-                            callbacks=callbacks)
-# model_bce_losses, model_bce_val_losses, model_bce_macro_f1s, model_bce_val_macro_f1s = learning_curves(history_bce)
-# print("Macro soft-F1 loss: %.2f" %model_bce_val_losses[-1])
-# print("Macro F1-score: %.2f" %model_bce_val_macro_f1s[-1])
-
+# # 保存 DataFrame 到 'result.csv'
+# df.to_csv('file.csv', index=False)
 
 
