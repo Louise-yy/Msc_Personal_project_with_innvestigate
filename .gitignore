@@ -125,7 +125,7 @@ nosetests.cfg
 *.pdf
 *.npy
 *.npz
-*.jpg
+#*.jpg
 *.jpeg
 *.JPEG
 *.h5
