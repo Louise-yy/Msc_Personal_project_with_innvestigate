@@ -43,7 +43,7 @@ label_to_class_name = [str(i) for i in range(num_classes)]
 # Create & train model
 input_shape = (28, 28, 1)
 
-model = keras.models.Sequential(
+model1 = keras.models.Sequential(
     [
         keras.layers.Conv2D(32, (3, 3), activation="relu", input_shape=input_shape),
         keras.layers.Conv2D(64, (3, 3), activation="relu"),
@@ -53,25 +53,19 @@ model = keras.models.Sequential(
         keras.layers.Dense(10, activation="softmax"),
     ]
 )
+# scores = mnistutils.train_model(model, data, batch_size=128, epochs=2)
+# model.save("mnist.h5")
+# print("Scores on test set: loss=%s accuracy=%s" % tuple(scores))
 
-scores = mnistutils.train_model(model, data, batch_size=128, epochs=2)
-print("Scores on test set: loss=%s accuracy=%s" % tuple(scores))
+model = tf.keras.models.load_model("mnist.h5")
 
 # Choosing a test image for the tutorial:
-image = data[2][8:9]
+image = data[2][7:8]
 plot.imshow(image.squeeze(), cmap="gray", interpolation="nearest")
 plot.show()
 
 # Stripping the softmax activation from the model
 model_wo_sm = innvestigate.model_wo_softmax(model)
-# # Creating an analyzer
-# gradient_analyzer = innvestigate.analyzer.Gradient(model_wo_sm)
-# # Applying the analyzer
-# analysis = gradient_analyzer.analyze(image)
-# # Displaying the gradient
-# plot.imshow(analysis.squeeze(), cmap="seismic", interpolation="nearest")
-# plot.show()
-#
 # # Creating an analyzer
 # gradient_analyzer = innvestigate.create_analyzer("gradient", model_wo_sm)
 # # Applying the analyzer
@@ -80,21 +74,22 @@ model_wo_sm = innvestigate.model_wo_softmax(model)
 # plot.imshow(analysis.squeeze(), cmap="seismic", interpolation="nearest")
 # plot.show()
 
-# Creating a parameterized analyzer
-abs_gradient_analyzer = innvestigate.create_analyzer(
-    "gradient", model_wo_sm, postprocess="abs"
-)
-square_gradient_analyzer = innvestigate.create_analyzer(
-    "gradient", model_wo_sm, postprocess="square"
-)
-# Applying the analyzers
-abs_analysis = abs_gradient_analyzer.analyze(image)
-square_analysis = square_gradient_analyzer.analyze(image)
-# Displaying the analyses, use gray map as there no negative values anymore
-plot.imshow(abs_analysis.squeeze(), cmap="gray", interpolation="nearest")
-plot.show()
-plot.imshow(square_analysis.squeeze(), cmap="gray", interpolation="nearest")
-plot.show()
+
+# # Creating a parameterized analyzer
+# abs_gradient_analyzer = innvestigate.create_analyzer(
+#     "gradient", model_wo_sm, postprocess="abs"
+# )
+# square_gradient_analyzer = innvestigate.create_analyzer(
+#     "gradient", model_wo_sm, postprocess="square"
+# )
+# # Applying the analyzers
+# abs_analysis = abs_gradient_analyzer.analyze(image)
+# square_analysis = square_gradient_analyzer.analyze(image)
+# # Displaying the analyses, use gray map as there no negative values anymore
+# plot.imshow(abs_analysis.squeeze(), cmap="gray", interpolation="nearest")
+# plot.show()
+# plot.imshow(square_analysis.squeeze(), cmap="gray", interpolation="nearest")
+# plot.show()
 
 # Creating an analyzer and set neuron_selection_mode to "index"
 inputXgradient_analyzer = innvestigate.create_analyzer(

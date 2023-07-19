@@ -2,7 +2,6 @@ import logging
 import os
 import warnings
 
-import matplotlib.pyplot as plt
 import matplotlib.style as style
 import numpy as np
 import pandas as pd
@@ -39,7 +38,7 @@ logging.getLogger("tensorflow").setLevel(logging.ERROR)
 print("TF version:", tf.__version__)
 
 # 开始处理所有的数据
-df = pd.read_csv("file/label_special_after_change.csv")
+df = pd.read_csv("file/label_special_form.csv")
 # Get label frequencies in descending order
 label_freq = df['all_nouns'].apply(lambda s: str(s).split(',')).explode().value_counts().sort_values(ascending=False)
 # Create a list of rare labels 只是要过一遍这个流程，不然shape会不对
@@ -92,6 +91,12 @@ IMG_SIZE = 100  # Specify height and width of image to match the input format of
 CHANNELS = 3  # Keep RGB color channels to match the input format of the model
 
 
+
+# 导入训练好的模型
+model_bce = tf.keras.models.load_model("DL_no_macrof1.keras")
+
+
+
 # 从测试集中取第一个图片出来，对它进行处理
 filename = X_val[0]
 # Read an image from a file
@@ -110,12 +115,8 @@ print("filename: ", filename)
 image = Image.open(filename)
 image_resized = image.resize((100, 100))
 # image_resized.show()
-plt.imshow(image_resized, cmap="gray", interpolation="nearest")
-plt.show()
-
-
-# 导入训练好的模型
-model_bce = tf.keras.models.load_model("DL_no_macrof1.keras")
+plot.imshow(image_resized, cmap="gray", interpolation="nearest")
+plot.show()
 
 
 # Stripping the softmax activation from the model
@@ -126,14 +127,15 @@ gradient_analyzer = innvestigate.create_analyzer("gradient", model_wo_sm)
 # Applying the analyzer
 analysis = gradient_analyzer.analyze(image_normalized_expanded)
 # Displaying the gradient
-analysis_add = analysis + 1
+# 让图片中的数值都变成正数
+# analysis_add = analysis + 1
 # # 找到图像数据的最小值和最大值
 # min_value = np.min(analysis_add)
 # max_value = np.max(analysis_add)
 # # 将图像数据映射到0-1的区间内
 # analysis_normalized = ((analysis_add - min_value) / (max_value - min_value))
 # analysis_255 = analysis_normalized * 255
-plot.imshow(analysis_add.squeeze(), cmap="seismic", interpolation="nearest")
+plot.imshow(analysis.squeeze(), cmap="viridis", interpolation="nearest")
 plot.show()
 
 # # Creating a parameterized analyzer
@@ -155,16 +157,16 @@ plot.show()
 # plot.show()
 
 
-# Creating an analyzer and set neuron_selection_mode to "index"
-inputXgradient_analyzer = innvestigate.create_analyzer(
-    "input_t_gradient", model_wo_sm, neuron_selection_mode="index"
-)
-for neuron_index in range(20):
-    print("Analysis w.r.t. to neuron", neuron_index)
-    # Applying the analyzer and pass that we want
-    analysis = inputXgradient_analyzer.analyze(image_normalized_expanded, neuron_index)
-
-    # Displaying the gradient
-    analysis_add = analysis + 1
-    plot.imshow(analysis_add.squeeze(), cmap="seismic", interpolation="nearest")
-    plot.show()
+# # Creating an analyzer and set neuron_selection_mode to "index"
+# inputXgradient_analyzer = innvestigate.create_analyzer(
+#     "input_t_gradient", model_wo_sm, neuron_selection_mode="index"
+# )
+# for neuron_index in range(20):
+#     print("Analysis w.r.t. to neuron", neuron_index)
+#     # Applying the analyzer and pass that we want
+#     analysis = inputXgradient_analyzer.analyze(image_normalized_expanded, neuron_index)
+#
+#     # Displaying the gradient
+#     analysis_add = analysis + 1
+#     plot.imshow(analysis_add.squeeze(), cmap="seismic", interpolation="nearest")
+#     plot.show()

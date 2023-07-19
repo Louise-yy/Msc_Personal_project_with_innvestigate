@@ -62,7 +62,7 @@ df['all_nouns'] = df['all_nouns'].apply(lambda s: [l for l in str(s).split(',') 
 print(df.head())
 print("Number of sample:", len(df))
 # 分成训练集和测试集
-X_train, X_val, y_train, y_val = train_test_split(df['stop_frame'], df['all_nouns'], test_size=0.2, random_state=44)
+X_train, X_val, y_train, y_val = train_test_split(df['stop_frame'], df['all_nouns'], test_size=0.02, random_state=44)
 print("Number of posters for training: ", len(X_train))
 print("Number of posters for validation: ", len(X_val))
 # 把每个图片的路径前面都加上data/使路径变得完整
@@ -185,15 +185,21 @@ model_bce = tf.keras.models.load_model("DL_no_macrof1.keras")
 
 # Generate prediction
 # prediction = (predict > 0.5).astype('int')
-d = pd.read_csv("file/threshold.csv")
+d = pd.read_csv("file/threshold_new.csv")
 threshold = d['threshold']
+output_folder = "output"
 
 
 def get_per_prediction(img_path):
     print("img_path: ", img_path)
+    # img = image.load_img(img_path)
+    # plt.imshow(img)
+    # plt.show()
     img = image.load_img(img_path, target_size=(IMG_SIZE, IMG_SIZE, CHANNELS))
-    plt.imshow(img)
-    plt.show()
+    img.save(os.path.join(output_folder, img_path))
+    print(f"imgae saved to：{os.path.join(output_folder, img_path)}")
+    # plt.imshow(img)
+    # plt.show()
     img = image.img_to_array(img)
     img = img / 255
     img = np.expand_dims(img, axis=0)
@@ -207,34 +213,131 @@ def get_per_prediction(img_path):
             per_img_prediction.append(int(1))
         else:
             per_img_prediction.append(int(0))
+    prediction_boolean_list.append(per_img_prediction)
     print("predict boolean:", per_img_prediction)
 
     per_img_prediction = pd.Series(per_img_prediction)
     per_img_prediction.index = mlb.classes_
     per_img_prediction_noun = per_img_prediction[per_img_prediction == 1].index.values
     print("predict noun:", per_img_prediction_noun)
-    return per_img_prediction_noun
+    return predict, per_img_prediction_noun
 
 
-# 这只是得到了一个图片的prediction
-test = get_per_prediction(X_val[1])
-print(test)
+# # 这只是得到了一个图片的prediction
+# predict_number, predict_boolean, predict_noun = get_per_prediction(X_val[1])
+# print(test)
 
-# prediction_list = []
-# for x in X_val:
-#     per_prediction = get_per_prediction(x)
-#     prediction_list.append(per_prediction)
-#
-# print(prediction_list)
-# # 创建 DataFrame
-# df = pd.DataFrame({
-#     'frame': X_val,
-#     'predict': b,
-#     'label': y_val_bin,
-#     'result': d
-# })
-#
-# # 保存 DataFrame 到 'result.csv'
-# df.to_csv('file.csv', index=False)
+# 获取整个test dataset的prediction
+prediction_number_list = []
+prediction_boolean_list = []
+prediction_noun_list = []
+for x in X_val:
+    predict_number, predict_noun = get_per_prediction(x)
+    prediction_number_list.append(predict_number)
+    prediction_noun_list.append(predict_noun)
+
+print(prediction_number_list)
+print(prediction_boolean_list)
+print(prediction_noun_list)
+
+p_number_1 = []
+p_number_2 = []
+p_number_3 = []
+p_number_4 = []
+p_number_5 = []
+p_number_6 = []
+p_number_7 = []
+p_number_8 = []
+p_number_9 = []
+p_number_10 = []
+p_number_11 = []
+p_number_12 = []
+p_number_13 = []
+p_number_14 = []
+p_number_15 = []
+p_number_16 = []
+p_number_17 = []
+p_number_18 = []
+p_number_19 = []
+p_number_20 = []
+for a in prediction_number_list:
+    p_number_1.append(a[0, 0])
+    p_number_2.append(a[0, 1])
+    p_number_3.append(a[0, 2])
+    p_number_4.append(a[0, 3])
+    p_number_5.append(a[0, 4])
+    p_number_6.append(a[0, 5])
+    p_number_7.append(a[0, 6])
+    p_number_8.append(a[0, 7])
+    p_number_9.append(a[0, 8])
+    p_number_10.append(a[0, 9])
+    p_number_11.append(a[0, 10])
+    p_number_12.append(a[0, 11])
+    p_number_13.append(a[0, 12])
+    p_number_14.append(a[0, 13])
+    p_number_15.append(a[0, 14])
+    p_number_16.append(a[0, 15])
+    p_number_17.append(a[0, 16])
+    p_number_18.append(a[0, 17])
+    p_number_19.append(a[0, 18])
+    p_number_20.append(a[0, 19])
+
+y_val_str = [','.join(map(str, p_list)) for p_list in y_val]
+y_val_bin_str = [' '.join(map(str, p_list)) for p_list in y_val_bin]
+# m = [str(threshold[0]) for _ in range(37)]
+# 创建 DataFrame
+dataf = pd.DataFrame({
+    'frame': X_val,
+    # 'predict_number': prediction_number_list,
+    'predictive_boolean': prediction_boolean_list,
+    'label_boolean': y_val_bin_str,
+    'predictive_noun': prediction_noun_list,
+    'label_noun': y_val_str,
+    'p_1': p_number_1,
+    'p_1_threshold': [str(threshold[0]) for _ in range(37)],
+    'p_2': p_number_2,
+    'p_2_threshold': [str(threshold[1]) for _ in range(37)],
+    'p_3': p_number_3,
+    'p_3_threshold': [str(threshold[2]) for _ in range(37)],
+    'p_4': p_number_4,
+    'p_4_threshold': [str(threshold[3]) for _ in range(37)],
+    'p_5': p_number_5,
+    'p_5_threshold': [str(threshold[4]) for _ in range(37)],
+    'p_6': p_number_6,
+    'p_6_threshold': [str(threshold[5]) for _ in range(37)],
+    'p_7': p_number_7,
+    'p_7_threshold': [str(threshold[6]) for _ in range(37)],
+    'p_8': p_number_8,
+    'p_8_threshold': [str(threshold[7]) for _ in range(37)],
+    'p_9': p_number_9,
+    'p_9_threshold': [str(threshold[8]) for _ in range(37)],
+    'p_10': p_number_10,
+    'p_10_threshold': [str(threshold[9]) for _ in range(37)],
+    'p_11': p_number_11,
+    'p_11_threshold': [str(threshold[10]) for _ in range(37)],
+    'p_12': p_number_12,
+    'p_12_threshold': [str(threshold[11]) for _ in range(37)],
+    'p_13': p_number_13,
+    'p_13_threshold': [str(threshold[12]) for _ in range(37)],
+    'p_14': p_number_14,
+    'p_14_threshold': [str(threshold[13]) for _ in range(37)],
+    'p_15': p_number_15,
+    'p_15_threshold': [str(threshold[14]) for _ in range(37)],
+    'p_16': p_number_16,
+    'p_16_threshold': [str(threshold[15]) for _ in range(37)],
+    'p_17': p_number_17,
+    'p_17_threshold': [str(threshold[16]) for _ in range(37)],
+    'p_18': p_number_18,
+    'p_18_threshold': [str(threshold[17]) for _ in range(37)],
+    'p_19': p_number_19,
+    'p_19_threshold': [str(threshold[18]) for _ in range(37)],
+    'p_20': p_number_20,
+    'p_20_threshold': [str(threshold[19]) for _ in range(37)]
+})
+
+print(dataf)
+
+# 保存 DataFrame 到 'result.csv'
+dataf.to_csv('output/prediction.csv', index=False)
 
 

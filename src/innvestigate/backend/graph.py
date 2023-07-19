@@ -368,7 +368,7 @@ def model_wo_softmax(model: Model) -> Model:
     """Creates a new model w/o the final softmax activation."""
     return kmodels.Model(
         inputs=model.inputs,
-        outputs=pre_output_tensors(model.outputs, activation="sigmoid"),
+        outputs=pre_output_tensors(model.outputs, activation="softmax"),
         name=model.name,
     )
 

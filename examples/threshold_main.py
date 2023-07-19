@@ -197,38 +197,3 @@ max_perf = result.sort_values('f1', ascending=False)
 print(max_perf)
 # max_perf.to_csv('file/threshold_new.csv', index=False)
 
-
-# def show_prediction(stop_frames, movies_df, model):
-#     # Get movie info
-#     stop_frames = df.loc[df['stop_frames'] == stop_frames]['stop_frames'].iloc[0]
-#     labels = df.loc[df['stop_frames'] == stop_frames]['all_nouns'].iloc[0]
-#     img_path = os.path.join('data', str(stop_frames))
-#
-#     # Read and prepare image
-#     img = image.load_img(img_path, target_size=(IMG_SIZE, IMG_SIZE, CHANNELS))
-#     img = image.img_to_array(img)
-#     img = img / 255
-#     img = np.expand_dims(img, axis=0)
-#
-#     # Generate prediction
-#     prediction = (model.predict(img) > 0.5).astype('int')
-#     prediction = pd.Series(prediction[0])
-#     prediction.index = mlb.classes_
-#     prediction = prediction[prediction == 1].index.values
-#
-#     # Dispaly image with prediction
-#     style.use('default')
-#     plt.figure(figsize=(8, 4))
-#     plt.imshow(Image.open(img_path))
-#     plt.title('\n\n{}\n\nGenre\n{}\n\nPrediction\n{}\n'.format(stop_frames, labels, list(prediction)), fontsize=9)
-#     plt.show()
-#
-# stop_frames = ["Clash of the Titans (2010)",
-#           "An Affair of Love (1999)",
-#           "Dragon Ball: Episode of Bardock (2011)",
-#           "L'Amour au temps de la guerre civile (2014)",
-#           "Paranormal Activity: The Marked Ones (2014)",
-#           "Chef (2014)"]
-#
-# for t in stop_frames:
-#     show_prediction(t, df, model_bce)
