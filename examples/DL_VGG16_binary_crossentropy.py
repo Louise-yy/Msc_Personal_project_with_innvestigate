@@ -1,7 +1,6 @@
-# 生成threshold.csv  把test data set的数据个数改为了2，用的是1862个train dataset
+import logging
 import os
 import warnings
-import logging
 
 import matplotlib.pyplot as plt
 import matplotlib.style as style
@@ -9,6 +8,7 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 import tensorflow as tf
+import tempfile
 import tensorflow_hub as hub
 import matplotlib.pyplot as plot
 
@@ -24,14 +24,12 @@ import src.innvestigate as innvestigate
 from PIL import Image
 
 from tool import *
-from utils import *
 
-# 前期设定
-# config = tf.compat.v1.ConfigProto()
-# config.gpu_options.allow_growth = True
-# session = tf.compat.v1.InteractiveSession(config=config)
-#
-# tf.compat.v1.disable_eager_execution()
+config = tf.compat.v1.ConfigProto()
+config.gpu_options.allow_growth = True
+session = tf.compat.v1.InteractiveSession(config=config)
+
+tf.compat.v1.disable_eager_execution()
 
 physical_devices = tf.config.list_physical_devices('GPU')
 tf.config.experimental.set_memory_growth(physical_devices[0], True)
@@ -40,10 +38,10 @@ warnings.filterwarnings('ignore')
 logging.getLogger("tensorflow").setLevel(logging.ERROR)
 print("TF version:", tf.__version__)
 
-# 开始处理所有的数据
 df = pd.read_csv("file/label_special_form.csv")
 # Get label frequencies in descending order
 label_freq = df['all_nouns'].apply(lambda s: str(s).split(',')).explode().value_counts().sort_values(ascending=False)
+
 # # Bar plot
 # style.use("fivethirtyeight")
 # plt.figure(figsize=(12, 10))
@@ -53,25 +51,32 @@ label_freq = df['all_nouns'].apply(lambda s: str(s).split(',')).explode().value_
 # plt.xticks(fontsize=12)
 # plt.yticks(fontsize=12)
 # plt.show()
+
 # Create a list of rare labels 只是要过一遍这个流程，不然shape会不对
 rare = list(label_freq[label_freq < 2].index)
 print("We will be ignoring these rare labels:", rare)
+
 # Transform all_nouns into a list of labels and remove the rare ones
 df['all_nouns'] = df['all_nouns'].apply(lambda s: [l for l in str(s).split(',') if l not in rare])
 print(df.head())
 print("Number of sample:", len(df))
+
 # 分成训练集和测试集
-X_train, X_val, y_train, y_val = train_test_split(df['stop_frame'], df['all_nouns'], test_size=0.001, random_state=44)
+X_train, X_val, y_train, y_val = train_test_split(df['stop_frame'], df['all_nouns'], test_size=0.2, random_state=44)
 print("Number of posters for training: ", len(X_train))
 print("Number of posters for validation: ", len(X_val))
-# 把每个图片的路径前面都加上data/使路径变得完整
+
+# 处理图片数据，把每个图片的路径前面都加上data/使路径变得完整
 X_train = [os.path.join('data', str(f)) for f in X_train]
 X_val = [os.path.join('data', str(f)) for f in X_val]
 print("X_train[:8]:", X_train[:8])
-# 把标签数据变成list的格式
+
+# 处理标签数据
 y_train = list(y_train)
 y_val = list(y_val)
 print("y_train[:8]:", y_train[:8])
+
+
 # nobs = 8  # Maximum number of images to display
 # ncols = 4  # Number of columns in display
 # nrows = nobs//ncols  # Number of rows in display
@@ -85,12 +90,11 @@ print("y_train[:8]:", y_train[:8])
 #     plt.axis('off')
 # plt.show()
 
-# 构建一个mlb实例
+# Fit the multi-label binarizer on the training set 在训练集上拟合多标签二值化器
+print("Labels:")
 mlb = MultiLabelBinarizer()
-# 将label从string映射成数字
 mlb.fit(y_train)
 
-print("Labels:")
 # Loop over all labels and show them
 N_LABELS = len(mlb.classes_)
 for (i, label) in enumerate(mlb.classes_):
@@ -106,7 +110,7 @@ print("y_val_bin.shape:", y_val_bin.shape)
 for i in range(3):
     print(X_train[i], y_train_bin[i])
 
-IMG_SIZE = 224  # ############1
+IMG_SIZE = 100  # 100
 CHANNELS = 3  # Keep RGB color channels to match the input format of the model
 
 
@@ -127,7 +131,7 @@ def parse_function(filename, label):
     return image_normalized, label
 
 
-BATCH_SIZE = 64  # #################2
+BATCH_SIZE = 8  # 8
 AUTOTUNE = tf.data.experimental.AUTOTUNE  # Adapt preprocessing and prefetching dynamically
 SHUFFLE_BUFFER_SIZE = 1024  # Shuffle the training data by a chunck of 1024 observations
 
@@ -162,28 +166,43 @@ def create_dataset(filenames, labels, is_training=True):
 train_ds = create_dataset(X_train, y_train_bin)
 val_ds = create_dataset(X_val, y_val_bin)
 
+# for f, l in train_ds.take(1):
+#     print("Shape of features array:", f.numpy().shape)
+#     print("Shape of labels array:", l.numpy().shape)
 
-@tf.function
-def macro_soft_f1(y, y_hat):
-    """Compute the macro soft F1-score as a cost (average 1 - soft-F1 across all labels).
-    Use probability values instead of binary predictions.
+conv_base = VGG16(weights='imagenet',
+                  include_top=False,
+                  input_shape=(IMG_SIZE, IMG_SIZE, CHANNELS))
+conv_base.summary()
+conv_base.trainable = False
 
-    Args:
-        y (int32 Tensor): targets array of shape (BATCH_SIZE, N_LABELS)
-        y_hat (float32 Tensor): probability matrix from forward propagation of shape (BATCH_SIZE, N_LABELS)
+# feature_extractor_url = "https://tfhub.dev/google/imagenet/mobilenet_v2_100_224/feature_vector/4"
+# feature_extractor_layer = hub.KerasLayer(feature_extractor_url,
+#                                          input_shape=(IMG_SIZE, IMG_SIZE, CHANNELS))
+# feature_extractor_layer.trainable = False
 
-    Returns:
-        cost (scalar Tensor): value of the cost function for the batch
-    """
-    y = tf.cast(y, tf.float32)
-    y_hat = tf.cast(y_hat, tf.float32)
-    tp = tf.reduce_sum(y_hat * y, axis=0)
-    fp = tf.reduce_sum(y_hat * (1 - y), axis=0)
-    fn = tf.reduce_sum((1 - y_hat) * y, axis=0)
-    soft_f1 = 2 * tp / (2 * tp + fn + fp + 1e-16)
-    cost = 1 - soft_f1  # reduce 1 - soft-f1 in order to increase soft-f1
-    macro_cost = tf.reduce_mean(cost)  # average on all labels
-    return macro_cost
+# @tf.function
+# def macro_soft_f1(y, y_hat):
+#     """Compute the macro soft F1-score as a cost (average 1 - soft-F1 across all labels).
+#     Use probability values instead of binary predictions.
+#
+#     Args:
+#         y (int32 Tensor): targets array of shape (BATCH_SIZE, N_LABELS)
+#         y_hat (float32 Tensor): probability matrix from forward propagation of shape (BATCH_SIZE, N_LABELS)
+#
+#     Returns:
+#         cost (scalar Tensor): value of the cost function for the batch
+#     """
+#     y = tf.cast(y, tf.float32)
+#     y_hat = tf.cast(y_hat, tf.float32)
+#     tp = tf.reduce_sum(y_hat * y, axis=0)
+#     fp = tf.reduce_sum(y_hat * (1 - y), axis=0)
+#     fn = tf.reduce_sum((1 - y_hat) * y, axis=0)
+#     soft_f1 = 2 * tp / (2 * tp + fn + fp + 1e-16)
+#     cost = 1 - soft_f1  # reduce 1 - soft-f1 in order to increase soft-f1
+#     macro_cost = tf.reduce_mean(cost)  # average on all labels
+#     return macro_cost
+
 
 @tf.function
 def macro_f1(y, y_hat, thresh=0.5):
@@ -206,44 +225,37 @@ def macro_f1(y, y_hat, thresh=0.5):
     return macro_f1
 
 
-# ###############3
-# 定义KerasLayer的包装函数
-def KerasLayerWrapper(*args, **kwargs):
-    return hub.KerasLayer(*args, **kwargs)
+LR = 1e-5  # Keep it small when transfer learning
+EPOCHS = 10
+model_bce = tf.keras.Sequential([
+    conv_base,
+    layers.Flatten(),
+    layers.Dense(1024, activation='relu', name='hidden_layer'),
+    layers.Dense(N_LABELS, activation='sigmoid', name='output')
+])
 
-# 加载模型时使用custom_objects参数来传递自定义层的定义
-model_bce = tf.keras.models.load_model("DL_mobilenetV2_macro_soft_f1.keras", custom_objects={"KerasLayer": KerasLayerWrapper, "macro_soft_f1": macro_soft_f1, "macro_f1": macro_f1})
+model_bce.summary()
 
-# # 导入训练好的模型
-# model_bce = tf.keras.models.load_model("DL_VGG16_binary_crossentropy.keras")
+model_bce.compile(
+    optimizer=tf.keras.optimizers.Adam(lr=5e-4),
+    loss=tf.keras.metrics.binary_crossentropy,
+    metrics=['accuracy'])
 
-# Get all label names
-label_names = mlb.classes_
-# Performance table with the second model (binary cross-entropy loss)
-grid_bce = perf_grid(train_ds, y_train_bin, label_names, model_bce)
-print(grid_bce.head(20))
-# grid_bce.to_csv('file/grid_bce.csv', index=False)
+callbacks = [
+    tf.keras.callbacks.ModelCheckpoint(
+        filepath="DL_VGG16_binary_crossentropy.keras",
+        save_best_only=True,
+        monitor="val_loss")
+]
+history_bce = model_bce.fit(train_ds,
+                            epochs=EPOCHS,
+                            validation_data=create_dataset(X_val, y_val_bin),
+                            callbacks=callbacks)
+# model_bce_losses, model_bce_val_losses, model_bce_macro_f1s, model_bce_val_macro_f1s = learning_curves(history_bce)
+# print("Macro soft-F1 loss: %.2f" %model_bce_val_losses[-1])
+# print("Macro F1-score: %.2f" %model_bce_val_macro_f1s[-1])
+# y_hat_val = model_bce.predict(train_ds)
+# print(y_hat_val)
 
-# Get the maximum F1-score for each label when using the second model and varying the threshold
-# 按照'id', 'label', 'freq'进行分组，计算'f1'列的最大值
-max_perf = grid_bce.groupby(['id', 'label', 'freq'])[['f1']].max()
-# 按照'f1'列进行降序排序
-max_perf = max_perf.sort_values('f1', ascending=False)
-# 重新设置索引
-max_perf = max_perf.reset_index()
-# 将'f1'列重命名为'f1max_bce'
-max_perf.rename(columns={'f1': 'f1max_bce'}, inplace=True)
-# 应用颜色渐变样式，使用sns.light_palette("lightgreen", as_cmap=True)设置颜色映射
-max_perf.style.background_gradient(subset=['freq', 'f1max_bce'], cmap=sns.light_palette("lightgreen", as_cmap=True))
-print(max_perf)
 
-# Get the maximum F1-score for each label when using the second model and varying the threshold
-# 根据'id'、'label'和'freq'列进行分组，并找到每个组内'f1'值最大的那一行
-max_f1_rows = grid_bce.groupby(['id', 'label', 'freq'])['f1'].idxmax()
-# 通过索引获取具有最大'f1'值的行
-result = grid_bce.loc[max_f1_rows]
-# 按照'f1'列进行降序排序
-max_perf = result.sort_values('f1', ascending=False)
-print(max_perf)
-max_perf.to_csv('file/threshold_mobilenetV2_macro_soft_f1.csv', index=False)
 

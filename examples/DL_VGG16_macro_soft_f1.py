@@ -12,6 +12,8 @@ import tempfile
 import tensorflow_hub as hub
 import matplotlib.pyplot as plot
 
+from tensorflow.python.framework import ops
+from tensorflow.python.ops import math_ops
 from keras.applications import VGG16
 from datetime import datetime
 from keras.preprocessing import image
@@ -173,6 +175,7 @@ val_ds = create_dataset(X_val, y_val_bin)
 conv_base = VGG16(weights='imagenet',
                   include_top=False,
                   input_shape=(IMG_SIZE, IMG_SIZE, CHANNELS))
+conv_base.summary()
 conv_base.trainable = False
 
 # feature_extractor_url = "https://tfhub.dev/google/imagenet/mobilenet_v2_100_224/feature_vector/4"
@@ -180,27 +183,29 @@ conv_base.trainable = False
 #                                          input_shape=(IMG_SIZE, IMG_SIZE, CHANNELS))
 # feature_extractor_layer.trainable = False
 
-# @tf.function
-# def macro_soft_f1(y, y_hat):
-#     """Compute the macro soft F1-score as a cost (average 1 - soft-F1 across all labels).
-#     Use probability values instead of binary predictions.
-#
-#     Args:
-#         y (int32 Tensor): targets array of shape (BATCH_SIZE, N_LABELS)
-#         y_hat (float32 Tensor): probability matrix from forward propagation of shape (BATCH_SIZE, N_LABELS)
-#
-#     Returns:
-#         cost (scalar Tensor): value of the cost function for the batch
-#     """
-#     y = tf.cast(y, tf.float32)
-#     y_hat = tf.cast(y_hat, tf.float32)
-#     tp = tf.reduce_sum(y_hat * y, axis=0)
-#     fp = tf.reduce_sum(y_hat * (1 - y), axis=0)
-#     fn = tf.reduce_sum((1 - y_hat) * y, axis=0)
-#     soft_f1 = 2 * tp / (2 * tp + fn + fp + 1e-16)
-#     cost = 1 - soft_f1  # reduce 1 - soft-f1 in order to increase soft-f1
-#     macro_cost = tf.reduce_mean(cost)  # average on all labels
-#     return macro_cost
+@tf.function
+def macro_soft_f1(y, y_hat):
+    """Compute the macro soft F1-score as a cost (average 1 - soft-F1 across all labels).
+    Use probability values instead of binary predictions.
+
+    Args:
+        y (int32 Tensor): targets array of shape (BATCH_SIZE, N_LABELS)
+        y_hat (float32 Tensor): probability matrix from forward propagation of shape (BATCH_SIZE, N_LABELS)
+
+    Returns:
+        cost (scalar Tensor): value of the cost function for the batch
+    """
+    # y_hat = ops.convert_to_tensor_v2_with_dispatch(y_hat)
+    # y = math_ops.cast(y, y_hat.dtype)
+    y = tf.cast(y, tf.float32)
+    y_hat = tf.cast(y_hat, tf.float32)
+    tp = tf.reduce_sum(y_hat * y, axis=0)
+    fp = tf.reduce_sum(y_hat * (1 - y), axis=0)
+    fn = tf.reduce_sum((1 - y_hat) * y, axis=0)
+    soft_f1 = 2 * tp / (2 * tp + fn + fp + 1e-16)
+    cost = 1 - soft_f1  # reduce 1 - soft-f1 in order to increase soft-f1
+    macro_cost = tf.reduce_mean(cost)  # average on all labels
+    return macro_cost
 
 
 @tf.function
@@ -231,19 +236,18 @@ model_bce = tf.keras.Sequential([
     layers.Flatten(),
     layers.Dense(1024, activation='relu', name='hidden_layer'),
     layers.Dense(N_LABELS, activation='sigmoid', name='output')
-    # layers.Dense(N_LABELS, activation='sigmoid')
 ])
 
 model_bce.summary()
 
 model_bce.compile(
-    optimizer='rmsprop',
-    loss=tf.keras.metrics.binary_crossentropy,
-    metrics=['accuracy'])
+    optimizer=tf.keras.optimizers.Adam(learning_rate=LR),
+    loss=macro_soft_f1,
+    metrics=[macro_f1])
 
 callbacks = [
     tf.keras.callbacks.ModelCheckpoint(
-        filepath="DL_no_macrof1.keras",
+        filepath="DL_VGG16_macro_soft_f1.keras",
         save_best_only=True,
         monitor="val_loss")
 ]
@@ -254,6 +258,8 @@ history_bce = model_bce.fit(train_ds,
 # model_bce_losses, model_bce_val_losses, model_bce_macro_f1s, model_bce_val_macro_f1s = learning_curves(history_bce)
 # print("Macro soft-F1 loss: %.2f" %model_bce_val_losses[-1])
 # print("Macro F1-score: %.2f" %model_bce_val_macro_f1s[-1])
+# y_hat_val = model_bce.predict(train_ds)
+# print(y_hat_val)
 
 
 

@@ -1,37 +1,14 @@
-# 产图的
+# threshold main!!!! 用的全部数据，且threshold精确到了小数点后三位
 import os
-import warnings
-import logging
-
-import matplotlib.pyplot as plt
-import matplotlib.style as style
 import numpy as np
 import pandas as pd
+import warnings
+import logging
 import seaborn as sns
 import tensorflow as tf
-import tempfile
 import tensorflow_hub as hub
-import matplotlib.pyplot as plot
-
-from keras.applications import VGG16
-from datetime import datetime
-from keras.preprocessing import image
-from PIL import Image
 from sklearn.preprocessing import MultiLabelBinarizer
 from sklearn.model_selection import train_test_split
-from sklearn.calibration import calibration_curve
-from tensorflow.keras import layers
-import src.innvestigate as innvestigate
-from PIL import Image
-
-from tool import *
-
-# 前期设定
-config = tf.compat.v1.ConfigProto()
-config.gpu_options.allow_growth = True
-session = tf.compat.v1.InteractiveSession(config=config)
-
-tf.compat.v1.disable_eager_execution()
 
 physical_devices = tf.config.list_physical_devices('GPU')
 tf.config.experimental.set_memory_growth(physical_devices[0], True)
@@ -44,16 +21,6 @@ print("TF version:", tf.__version__)
 df = pd.read_csv("file/label_special_form.csv")
 # Get label frequencies in descending order
 label_freq = df['all_nouns'].apply(lambda s: str(s).split(',')).explode().value_counts().sort_values(ascending=False)
-# # Bar plot
-# style.use("fivethirtyeight")
-# plt.figure(figsize=(12, 10))
-# sns.barplot(y=label_freq.index.values, x=label_freq, order=label_freq.index)
-# plt.title("Label frequency", fontsize=14)
-# plt.xlabel("")
-# plt.xticks(fontsize=12)
-# plt.yticks(fontsize=12)
-# plt.show()
-
 # Create a list of rare labels 只是要过一遍这个流程，不然shape会不对
 rare = list(label_freq[label_freq < 2].index)
 print("We will be ignoring these rare labels:", rare)
@@ -62,35 +29,24 @@ df['all_nouns'] = df['all_nouns'].apply(lambda s: [l for l in str(s).split(',') 
 print(df.head())
 print("Number of sample:", len(df))
 # 分成训练集和测试集
-X_train, X_val, y_train, y_val = train_test_split(df['stop_frame'], df['all_nouns'], test_size=0.02, random_state=44)
+# X_train, X_val, y_train, y_val = train_test_split(df['stop_frame'], df['all_nouns'], test_size=0.001, random_state=44)
+X_train = df['stop_frame']
+y_train = df['all_nouns']
 print("Number of posters for training: ", len(X_train))
-print("Number of posters for validation: ", len(X_val))
+# print("Number of posters for validation: ", len(X_val))
 # 把每个图片的路径前面都加上data/使路径变得完整
 X_train = [os.path.join('data', str(f)) for f in X_train]
-X_val = [os.path.join('data', str(f)) for f in X_val]
+# X_val = [os.path.join('data', str(f)) for f in X_val]
 print("X_train[:8]:", X_train[:8])
 # 把标签数据变成list的格式
 y_train = list(y_train)
-y_val = list(y_val)
+# y_val = list(y_val)
 print("y_train[:8]:", y_train[:8])
-# nobs = 8  # Maximum number of images to display
-# ncols = 4  # Number of columns in display
-# nrows = nobs//ncols  # Number of rows in display
 
-# style.use("default")
-# plt.figure(figsize=(12, 4*nrows))
-# for i in range(nrows*ncols):
-#     ax = plt.subplot(nrows, ncols, i+1)
-#     plt.imshow(Image.open(X_train[i]))
-#     plt.title(y_train[i], size=10)
-#     plt.axis('off')
-# plt.show()
-
-# Fit the multi-label binarizer on the training set 在训练集上拟合多标签二值化器
 # 构建一个mlb实例
 mlb = MultiLabelBinarizer()
-mlb.fit(y_train)
 # 将label从string映射成数字
+mlb.fit(y_train)
 
 print("Labels:")
 # Loop over all labels and show them
@@ -100,15 +56,15 @@ for (i, label) in enumerate(mlb.classes_):
 
 # 用mlb处理train和val的标签数据，将其转换成二进制的向量,格式为一维数组
 y_train_bin = mlb.transform(y_train)
-y_val_bin = mlb.transform(y_val)
+# y_val_bin = mlb.transform(y_val)
 print("y_train_bin.shape:", y_train_bin.shape)
-print("y_val_bin.shape:", y_val_bin.shape)
+# print("y_val_bin.shape:", y_val_bin.shape)
 
 # Print example of movie posters and their binary targets
 for i in range(3):
     print(X_train[i], y_train_bin[i])
 
-IMG_SIZE = 100  # Specify height and width of image to match the input format of the model
+IMG_SIZE = 100  # ############1
 CHANNELS = 3  # Keep RGB color channels to match the input format of the model
 
 
@@ -129,7 +85,7 @@ def parse_function(filename, label):
     return image_normalized, label
 
 
-BATCH_SIZE = 8  # Big enough to measure an F1-score
+BATCH_SIZE = 8  # #################2
 AUTOTUNE = tf.data.experimental.AUTOTUNE  # Adapt preprocessing and prefetching dynamically
 SHUFFLE_BUFFER_SIZE = 1024  # Shuffle the training data by a chunck of 1024 observations
 
@@ -162,182 +118,158 @@ def create_dataset(filenames, labels, is_training=True):
 
 
 train_ds = create_dataset(X_train, y_train_bin)
-val_ds = create_dataset(X_val, y_val_bin)
-
-# 导入训练好的模型
-model_bce = tf.keras.models.load_model("DL_no_macrof1.keras")
-
-# # 选择图片
-# img_path = X_val[0]
-# labels = y_val[0]
-# # Read and prepare image
-# img = image.load_img(img_path, target_size=(IMG_SIZE, IMG_SIZE, CHANNELS))
-# plt.imshow(img)
-# plt.show()
-# img = image.img_to_array(img)
-# img = img / 255
-# img = np.expand_dims(img, axis=0)
-# predict = model_bce.predict(img)
-
-# im = Image.open(img_path)
+# val_ds = create_dataset(X_val, y_val_bin)
 
 
+@tf.function
+def macro_soft_f1(y, y_hat):
+    """Compute the macro soft F1-score as a cost (average 1 - soft-F1 across all labels).
+    Use probability values instead of binary predictions.
 
-# Generate prediction
-# prediction = (predict > 0.5).astype('int')
-d = pd.read_csv("file/threshold_new.csv")
-threshold = d['threshold']
-output_folder = "output"
+    Args:
+        y (int32 Tensor): targets array of shape (BATCH_SIZE, N_LABELS)
+        y_hat (float32 Tensor): probability matrix from forward propagation of shape (BATCH_SIZE, N_LABELS)
 
+    Returns:
+        cost (scalar Tensor): value of the cost function for the batch
+    """
+    y = tf.cast(y, tf.float32)
+    y_hat = tf.cast(y_hat, tf.float32)
+    tp = tf.reduce_sum(y_hat * y, axis=0)
+    fp = tf.reduce_sum(y_hat * (1 - y), axis=0)
+    fn = tf.reduce_sum((1 - y_hat) * y, axis=0)
+    soft_f1 = 2 * tp / (2 * tp + fn + fp + 1e-16)
+    cost = 1 - soft_f1  # reduce 1 - soft-f1 in order to increase soft-f1
+    macro_cost = tf.reduce_mean(cost)  # average on all labels
+    return macro_cost
 
-def get_per_prediction(img_path):
-    print("img_path: ", img_path)
-    # img = image.load_img(img_path)
-    # plt.imshow(img)
-    # plt.show()
-    img = image.load_img(img_path, target_size=(IMG_SIZE, IMG_SIZE, CHANNELS))
-    img.save(os.path.join(output_folder, img_path))
-    print(f"imgae saved to：{os.path.join(output_folder, img_path)}")
-    # plt.imshow(img)
-    # plt.show()
-    img = image.img_to_array(img)
-    img = img / 255
-    img = np.expand_dims(img, axis=0)
-    predict = model_bce.predict(img)
-    print("predict number:", predict)
-    per_img_prediction = []
-    for i in range(20):
-        v = predict[0, i]
-        t = d.loc[d['id'] == i, 'threshold'].values[0]
-        if v >= t:
-            per_img_prediction.append(int(1))
-        else:
-            per_img_prediction.append(int(0))
-    prediction_boolean_list.append(per_img_prediction)
-    print("predict boolean:", per_img_prediction)
+@tf.function
+def macro_f1(y, y_hat, thresh=0.5):
+    """Compute the macro F1-score on a batch of observations (average F1 across labels)
 
-    per_img_prediction = pd.Series(per_img_prediction)
-    per_img_prediction.index = mlb.classes_
-    per_img_prediction_noun = per_img_prediction[per_img_prediction == 1].index.values
-    print("predict noun:", per_img_prediction_noun)
-    return predict, per_img_prediction_noun
+    Args:
+        y (int32 Tensor): labels array of shape (BATCH_SIZE, N_LABELS)
+        y_hat (float32 Tensor): probability matrix from forward propagation of shape (BATCH_SIZE, N_LABELS)
+        thresh: probability value above which we predict positive
 
-
-# # 这只是得到了一个图片的prediction
-# predict_number, predict_boolean, predict_noun = get_per_prediction(X_val[1])
-# print(test)
-
-# 获取整个test dataset的prediction
-prediction_number_list = []
-prediction_boolean_list = []
-prediction_noun_list = []
-for x in X_val:
-    predict_number, predict_noun = get_per_prediction(x)
-    prediction_number_list.append(predict_number)
-    prediction_noun_list.append(predict_noun)
-
-print(prediction_number_list)
-print(prediction_boolean_list)
-print(prediction_noun_list)
-
-p_number_1 = []
-p_number_2 = []
-p_number_3 = []
-p_number_4 = []
-p_number_5 = []
-p_number_6 = []
-p_number_7 = []
-p_number_8 = []
-p_number_9 = []
-p_number_10 = []
-p_number_11 = []
-p_number_12 = []
-p_number_13 = []
-p_number_14 = []
-p_number_15 = []
-p_number_16 = []
-p_number_17 = []
-p_number_18 = []
-p_number_19 = []
-p_number_20 = []
-for a in prediction_number_list:
-    p_number_1.append(a[0, 0])
-    p_number_2.append(a[0, 1])
-    p_number_3.append(a[0, 2])
-    p_number_4.append(a[0, 3])
-    p_number_5.append(a[0, 4])
-    p_number_6.append(a[0, 5])
-    p_number_7.append(a[0, 6])
-    p_number_8.append(a[0, 7])
-    p_number_9.append(a[0, 8])
-    p_number_10.append(a[0, 9])
-    p_number_11.append(a[0, 10])
-    p_number_12.append(a[0, 11])
-    p_number_13.append(a[0, 12])
-    p_number_14.append(a[0, 13])
-    p_number_15.append(a[0, 14])
-    p_number_16.append(a[0, 15])
-    p_number_17.append(a[0, 16])
-    p_number_18.append(a[0, 17])
-    p_number_19.append(a[0, 18])
-    p_number_20.append(a[0, 19])
-
-y_val_str = [','.join(map(str, p_list)) for p_list in y_val]
-y_val_bin_str = [' '.join(map(str, p_list)) for p_list in y_val_bin]
-# m = [str(threshold[0]) for _ in range(37)]
-# 创建 DataFrame
-dataf = pd.DataFrame({
-    'frame': X_val,
-    # 'predict_number': prediction_number_list,
-    'predictive_boolean': prediction_boolean_list,
-    'label_boolean': y_val_bin_str,
-    'predictive_noun': prediction_noun_list,
-    'label_noun': y_val_str,
-    'p_1': p_number_1,
-    'p_1_threshold': [str(threshold[0]) for _ in range(37)],
-    'p_2': p_number_2,
-    'p_2_threshold': [str(threshold[1]) for _ in range(37)],
-    'p_3': p_number_3,
-    'p_3_threshold': [str(threshold[2]) for _ in range(37)],
-    'p_4': p_number_4,
-    'p_4_threshold': [str(threshold[3]) for _ in range(37)],
-    'p_5': p_number_5,
-    'p_5_threshold': [str(threshold[4]) for _ in range(37)],
-    'p_6': p_number_6,
-    'p_6_threshold': [str(threshold[5]) for _ in range(37)],
-    'p_7': p_number_7,
-    'p_7_threshold': [str(threshold[6]) for _ in range(37)],
-    'p_8': p_number_8,
-    'p_8_threshold': [str(threshold[7]) for _ in range(37)],
-    'p_9': p_number_9,
-    'p_9_threshold': [str(threshold[8]) for _ in range(37)],
-    'p_10': p_number_10,
-    'p_10_threshold': [str(threshold[9]) for _ in range(37)],
-    'p_11': p_number_11,
-    'p_11_threshold': [str(threshold[10]) for _ in range(37)],
-    'p_12': p_number_12,
-    'p_12_threshold': [str(threshold[11]) for _ in range(37)],
-    'p_13': p_number_13,
-    'p_13_threshold': [str(threshold[12]) for _ in range(37)],
-    'p_14': p_number_14,
-    'p_14_threshold': [str(threshold[13]) for _ in range(37)],
-    'p_15': p_number_15,
-    'p_15_threshold': [str(threshold[14]) for _ in range(37)],
-    'p_16': p_number_16,
-    'p_16_threshold': [str(threshold[15]) for _ in range(37)],
-    'p_17': p_number_17,
-    'p_17_threshold': [str(threshold[16]) for _ in range(37)],
-    'p_18': p_number_18,
-    'p_18_threshold': [str(threshold[17]) for _ in range(37)],
-    'p_19': p_number_19,
-    'p_19_threshold': [str(threshold[18]) for _ in range(37)],
-    'p_20': p_number_20,
-    'p_20_threshold': [str(threshold[19]) for _ in range(37)]
-})
-
-print(dataf)
-
-# 保存 DataFrame 到 'result.csv'
-dataf.to_csv('output/prediction.csv', index=False)
+    Returns:
+        macro_f1 (scalar Tensor): value of macro F1 for the batch
+    """
+    y_pred = tf.cast(tf.greater(y_hat, thresh), tf.float32)
+    tp = tf.cast(tf.math.count_nonzero(y_pred * y, axis=0), tf.float32)
+    fp = tf.cast(tf.math.count_nonzero(y_pred * (1 - y), axis=0), tf.float32)
+    fn = tf.cast(tf.math.count_nonzero((1 - y_pred) * y, axis=0), tf.float32)
+    f1 = 2 * tp / (2 * tp + fn + fp + 1e-16)
+    macro_f1 = tf.reduce_mean(f1)
+    return macro_f1
 
 
+# ###############3
+# 定义KerasLayer的包装函数
+def KerasLayerWrapper(*args, **kwargs):
+    return hub.KerasLayer(*args, **kwargs)
+
+# 加载模型时使用custom_objects参数来传递自定义层的定义
+# model_bce = tf.keras.models.load_model("DL_mobilenetV2_macro_soft_f1.keras", custom_objects={"KerasLayer": KerasLayerWrapper, "macro_soft_f1": macro_soft_f1, "macro_f1": macro_f1})
+
+# # 导入训练好的模型
+model_bce = tf.keras.models.load_model("DL_VGG16_binary_crossentropy.keras")
+
+def perf_grid(ds, target, label_names, model, n_thresh=10000):
+    """Computes the performance table containing target, label names,
+    label frequencies, thresholds between 0 and 1, number of tp, fp, fn,
+    precision, recall and f-score metrics for each label.
+
+    Args:
+        ds (tf.data.Datatset): contains the features array
+        target (numpy array): target matrix of shape (BATCH_SIZE, N_LABELS)
+        label_names (list of strings): column names in target matrix
+        model (tensorflow keras model): model to use for prediction
+        n_thresh (int) : number of thresholds to try
+
+    Returns:
+        grid (Pandas dataframe): performance table
+    """
+
+    # Get predictions
+    y_hat_val = model.predict(ds)
+    # Define target matrix
+    y_val = target
+    # Find label frequencies in the validation set
+    label_freq = target.sum(axis=0)
+    # Get label indexes
+    label_index = [i for i in range(len(label_names))]
+    # Define thresholds
+    thresholds = np.linspace(0, 1, n_thresh + 1).astype(np.float32)
+
+    # Compute all metrics for all labels
+    ids, labels, freqs, tps, fps, fns, precisions, recalls, f1s = [], [], [], [], [], [], [], [], []
+    for l in label_index:
+        for thresh in thresholds:
+            ids.append(l)
+            labels.append(label_names[l])
+            f = round(label_freq[l] / len(y_val), 2)
+            freqs.append(f)
+            y_hat = y_hat_val[:, l]  # prediction数值
+            y = y_val[:, l]  # label
+            y_pred = y_hat > thresh  # 是一个boolean值
+            tp = np.count_nonzero(y_pred * y)
+            fp = np.count_nonzero(y_pred * (1 - y))
+            fn = np.count_nonzero((1 - y_pred) * y)
+            precision = tp / (tp + fp + 1e-16)
+            recall = tp / (tp + fn + 1e-16)
+            f1 = 2 * tp / (2 * tp + fn + fp + 1e-16)
+            tps.append(tp)
+            fps.append(fp)
+            fns.append(fn)
+            precisions.append(precision)
+            recalls.append(recall)
+            f1s.append(f1)
+
+    # Create the performance dataframe
+    grid = pd.DataFrame({
+        'id': ids,
+        'label': labels,
+        'freq': freqs,
+        'threshold': list(thresholds) * len(label_index),
+        'tp': tps,
+        'fp': fps,
+        'fn': fns,
+        'precision': precisions,
+        'recall': recalls,
+        'f1': f1s})
+
+    grid = grid[['id', 'label', 'freq', 'threshold',
+                 'tp', 'fn', 'fp', 'precision', 'recall', 'f1']]
+
+    return grid
+
+# Get all label names
+label_names = mlb.classes_
+# Performance table with the second model (binary cross-entropy loss)
+grid_bce = perf_grid(train_ds, y_train_bin, label_names, model_bce)
+print(grid_bce.head(20))
+# grid_bce.to_csv('file/grid_bce.csv', index=False)
+
+
+# 按照'id', 'label', 'freq'进行分组，计算'f1'列的最大值
+max_perf = grid_bce.groupby(['id', 'label', 'freq'])[['f1']].max()
+# 按照'f1'列进行降序排序
+max_perf = max_perf.sort_values('f1', ascending=False)
+# 重新设置索引
+max_perf = max_perf.reset_index()
+# 将'f1'列重命名为'f1max_bce'
+max_perf.rename(columns={'f1': 'f1max_bce'}, inplace=True)
+# 应用颜色渐变样式，使用sns.light_palette("lightgreen", as_cmap=True)设置颜色映射
+max_perf.style.background_gradient(subset=['freq', 'f1max_bce'], cmap=sns.light_palette("lightgreen", as_cmap=True))
+print(max_perf)
+
+# Get the maximum F1-score for each label when using the second model and varying the threshold
+# 根据'id'、'label'和'freq'列进行分组，并找到每个组内'f1'值最大的那一行
+max_f1_rows = grid_bce.groupby(['id', 'label', 'freq'])['f1'].idxmax()
+# 通过索引获取具有最大'f1'值的行
+result = grid_bce.loc[max_f1_rows]
+# 按照'f1'列进行降序排序
+max_perf = result.sort_values('f1', ascending=False)
+print(max_perf)
+max_perf.to_csv('file/threshold_10000.csv', index=False)

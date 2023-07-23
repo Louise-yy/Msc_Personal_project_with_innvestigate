@@ -275,7 +275,7 @@ def perf_grid(ds, target, label_names, model, n_thresh=100):
         for thresh in thresholds:   
             ids.append(l)
             labels.append(label_names[l])
-            f = round(label_freq[l]/len(y_val),2)
+            f = round(label_freq[l]/len(y_val), 2)
             freqs.append(f)
             y_hat = y_hat_val[:, l]  # prediction数值
             y = y_val[:, l]  # label
@@ -286,7 +286,6 @@ def perf_grid(ds, target, label_names, model, n_thresh=100):
             precision = tp / (tp + fp + 1e-16)
             recall = tp / (tp + fn + 1e-16)
             f1 = 2*tp / (2*tp + fn + fp + 1e-16)
-            # f1 = 2*precision*recall/(precision+recall+1e-16)
             tps.append(tp)
             fps.append(fp)
             fns.append(fn)

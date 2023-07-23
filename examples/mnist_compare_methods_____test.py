@@ -13,6 +13,7 @@ import src.innvestigate.utils as iutils
 # Use utility libraries to focus on relevant iNNvestigate routines.
 import utils as eutils
 import utils.mnist as mnistutils
+import matplotlib.pyplot as plot
 
 config = tf.compat.v1.ConfigProto()
 config.gpu_options.allow_growth = True
@@ -49,7 +50,7 @@ model = keras.models.Sequential(
     ]
 )
 
-scores = mnistutils.train_model(model, data, batch_size=128, epochs=10)
+scores = mnistutils.train_model(model, data, batch_size=128, epochs=3)
 print("Scores on test set: loss=%s accuracy=%s" % tuple(scores))
 
 # Scale to [0, 1] range for plotting.
@@ -92,6 +93,10 @@ analyzers = [
     for method in methods
 ]
 
+analyzer = innvestigate.create_analyzer(
+    "lrp.z", model_wo_softmax
+)
+
 n = 10
 test_images = list(zip(data[2][:n], data[3][:n]))
 
@@ -99,7 +104,7 @@ analysis = np.zeros([len(test_images), len(analyzers), 28, 28, 3])
 text = []
 
 
-for i, (x, y) in enumerate(test_images):
+for i, (x, y) in enumerate(test_images):  # i是数据序号，x是照片，y是label
     # Add batch axis.
     x = x[None, :, :, :]
 
@@ -121,34 +126,46 @@ for i, (x, y) in enumerate(test_images):
     for aidx, analyzer in enumerate(analyzers):
         # Analyze.
         a = analyzer.analyze(x)
-        # Apply common postprocessing, e.g., re-ordering the channels for plotting.
+        # Apply common postprocessing, e.g., re-ordering the channels for plotting. 调整channels的顺序
         a = mnistutils.postprocess(a)
         # Apply analysis postprocessing, e.g., creating a heatmap.
         a = methods[aidx][2](a)
-        # Store the analysis.
+        # Store the analysis. a是（2，38，38，1） a[0]是照片（28，28，1）a[1]是len 1
         analysis[i, aidx] = a[0]
+        plot.imshow(a[0], cmap="seismic", interpolation="nearest")
+        plot.show()
+    # a = analyzer.analyze(x)
+    # # Apply common postprocessing, e.g., re-ordering the channels for plotting. 调整channels的顺序
+    # a = mnistutils.postprocess(a)
+    # # Apply analysis postprocessing, e.g., creating a heatmap.
+    # a = mnistutils.heatmap(a)
+    # plot.imshow(a[0], cmap="seismic", interpolation="nearest")
+    # plot.show()
 
-# Prepare the grid as rectengular list
-grid = [
-    [analysis[i, j] for j in range(analysis.shape[1])] for i in range(analysis.shape[0])
-]
-# Prepare the labels
-label, presm, prob, pred = zip(*text)
-row_labels_left = [
-    (f"label: {label[i]}", f"pred: {pred[i]}") for i in range(len(label))
-]
-row_labels_right = [
-    (f"logit: {presm[i]}", f"prob: {prob[i]}") for i in range(len(label))
-]
-col_labels = ["".join(method[3]) for method in methods]
-
-# Plot the analysis.
-eutils.plot_image_grid(
-    grid,
-    row_labels_left,
-    row_labels_right,
-    col_labels,
-    file_name=os.environ.get("PLOTFILENAME", None),
-)
+# # Prepare the grid as rectengular list
+# grid = [
+#     [analysis[i, j] for j in range(analysis.shape[1])] for i in range(analysis.shape[0])
+# ]
+# b = grid[9][9]
+# plot.imshow(grid[9][9], cmap="seismic", interpolation="nearest")
+# plot.show()
+# # Prepare the labels
+# label, presm, prob, pred = zip(*text)
+# row_labels_left = [
+#     (f"label: {label[i]}", f"pred: {pred[i]}") for i in range(len(label))
+# ]
+# row_labels_right = [
+#     (f"logit: {presm[i]}", f"prob: {prob[i]}") for i in range(len(label))
+# ]
+# col_labels = ["".join(method[3]) for method in methods]
+#
+# # Plot the analysis.
+# eutils.plot_image_grid(
+#     grid,
+#     row_labels_left,
+#     row_labels_right,
+#     col_labels,
+#     file_name=os.environ.get("PLOTFILENAME", None),
+# )
 
 

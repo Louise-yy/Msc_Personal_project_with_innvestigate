@@ -357,11 +357,11 @@ class LRP(ReverseAnalyzerBase):
             raise ValueError(f"Unknown _bn_layer_fuse_mode {self._bn_layer_fuse_mode}")
 
         self._add_model_softmax_check()
-        self._add_model_check(
-            lambda layer: not ichecks.is_convnet_layer(layer),
-            "LRP is only tested for convolutional neural networks.",
-            check_type="warning",
-        )
+        # self._add_model_check(
+        #     lambda layer: not ichecks.is_convnet_layer(layer),
+        #     "LRP is only tested for convolutional neural networks.",
+        #     check_type="warning",
+        # )
 
         # TODO: refactor rule type checking into separate function
         # check if rule was given explicitly.
