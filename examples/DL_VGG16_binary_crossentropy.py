@@ -131,7 +131,7 @@ def parse_function(filename, label):
     return image_normalized, label
 
 
-BATCH_SIZE = 8  # 8
+BATCH_SIZE = 16  # 8
 AUTOTUNE = tf.data.experimental.AUTOTUNE  # Adapt preprocessing and prefetching dynamically
 SHUFFLE_BUFFER_SIZE = 1024  # Shuffle the training data by a chunck of 1024 observations
 
@@ -243,7 +243,7 @@ model_bce.compile(
 
 callbacks = [
     tf.keras.callbacks.ModelCheckpoint(
-        filepath="DL_VGG16_binary_crossentropy.keras",
+        filepath="DL_VGG16_binary_crossentropy_100_16.keras",
         save_best_only=True,
         monitor="val_loss")
 ]

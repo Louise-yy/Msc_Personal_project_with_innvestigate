@@ -6,6 +6,7 @@
       <sourceFolder url="file://$MODULE_DIR$/examples" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/src/innvestigate" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/examples/output" isTestSource="false" />
     </content>
     <orderEntry type="jdk" jdkName="Python 3.8 (epic-kitchens-100-object-masks)" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />

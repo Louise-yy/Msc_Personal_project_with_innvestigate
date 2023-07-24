@@ -46,15 +46,6 @@ print("TF version:", tf.__version__)
 df = pd.read_csv("file/label_special_form.csv")
 # Get label frequencies in descending order
 label_freq = df['all_nouns'].apply(lambda s: str(s).split(',')).explode().value_counts().sort_values(ascending=False)
-# # Bar plot
-# style.use("fivethirtyeight")
-# plt.figure(figsize=(12, 10))
-# sns.barplot(y=label_freq.index.values, x=label_freq, order=label_freq.index)
-# plt.title("Label frequency", fontsize=14)
-# plt.xlabel("")
-# plt.xticks(fontsize=12)
-# plt.yticks(fontsize=12)
-# plt.show()
 # Create a list of rare labels 只是要过一遍这个流程，不然shape会不对
 rare = list(label_freq[label_freq < 2].index)
 print("We will be ignoring these rare labels:", rare)
@@ -74,18 +65,6 @@ print("X_train[:8]:", X_train[:8])
 y_train = list(y_train)
 y_val = list(y_val)
 print("y_train[:8]:", y_train[:8])
-# nobs = 8  # Maximum number of images to display
-# ncols = 4  # Number of columns in display
-# nrows = nobs//ncols  # Number of rows in display
-
-# style.use("default")
-# plt.figure(figsize=(12, 4*nrows))
-# for i in range(nrows*ncols):
-#     ax = plt.subplot(nrows, ncols, i+1)
-#     plt.imshow(Image.open(X_train[i]))
-#     plt.title(y_train[i], size=10)
-#     plt.axis('off')
-# plt.show()
 
 # 构建一个mlb实例
 mlb = MultiLabelBinarizer()
@@ -102,7 +81,7 @@ for (i, label) in enumerate(mlb.classes_):
 y_train_bin = mlb.transform(y_train)
 y_val_bin = mlb.transform(y_val)
 
-IMG_SIZE = 100  # Specify height and width of image to match the input format of the model
+IMG_SIZE = 200  # Specify height and width of image to match the input format of the model
 CHANNELS = 3  # Keep RGB color channels to match the input format of the model
 
 def parse_function(filename, label):
@@ -208,13 +187,13 @@ def KerasLayerWrapper(*args, **kwargs):
 
 
 # 导入训练好的模型
-model_bce = tf.keras.models.load_model("DL_no_macrof1.keras")
+model_bce = tf.keras.models.load_model("DL_VGG16_binary_crossentropy_200.keras")
 # model_bce = tf.keras.models.load_model("macro_soft_f1.keras", custom_objects={"KerasLayer": KerasLayerWrapper, "macro_soft_f1": macro_soft_f1, "macro_f1": macro_f1})
 
 
 
 # 从测试集中取第一个图片出来，对它进行处理
-filename = X_train[1]
+filename = "data/P02_108_10617.jpg"
 # Read an image from a file
 image_string = tf.io.read_file(filename)
 # Decode it into a dense vector 解码后的图像数据是一个张量

@@ -64,7 +64,7 @@ print("y_train_bin.shape:", y_train_bin.shape)
 for i in range(3):
     print(X_train[i], y_train_bin[i])
 
-IMG_SIZE = 100  # ############1
+IMG_SIZE = 200  # ############1
 CHANNELS = 3  # Keep RGB color channels to match the input format of the model
 
 
@@ -85,7 +85,7 @@ def parse_function(filename, label):
     return image_normalized, label
 
 
-BATCH_SIZE = 8  # #################2
+BATCH_SIZE = 2  # #################2
 AUTOTUNE = tf.data.experimental.AUTOTUNE  # Adapt preprocessing and prefetching dynamically
 SHUFFLE_BUFFER_SIZE = 1024  # Shuffle the training data by a chunck of 1024 observations
 
@@ -173,7 +173,7 @@ def KerasLayerWrapper(*args, **kwargs):
 # model_bce = tf.keras.models.load_model("DL_mobilenetV2_macro_soft_f1.keras", custom_objects={"KerasLayer": KerasLayerWrapper, "macro_soft_f1": macro_soft_f1, "macro_f1": macro_f1})
 
 # # 导入训练好的模型
-model_bce = tf.keras.models.load_model("DL_VGG16_binary_crossentropy.keras")
+model_bce = tf.keras.models.load_model("DL_VGG16_binary_crossentropy_200.keras")
 
 def perf_grid(ds, target, label_names, model, n_thresh=10000):
     """Computes the performance table containing target, label names,
@@ -272,4 +272,4 @@ result = grid_bce.loc[max_f1_rows]
 # 按照'f1'列进行降序排序
 max_perf = result.sort_values('f1', ascending=False)
 print(max_perf)
-max_perf.to_csv('file/threshold_10000.csv', index=False)
+max_perf.to_csv('file/threshold_10000_200.csv', index=False)

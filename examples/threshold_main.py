@@ -212,10 +212,10 @@ def KerasLayerWrapper(*args, **kwargs):
     return hub.KerasLayer(*args, **kwargs)
 
 # 加载模型时使用custom_objects参数来传递自定义层的定义
-model_bce = tf.keras.models.load_model("DL_mobilenetV2_macro_soft_f1.keras", custom_objects={"KerasLayer": KerasLayerWrapper, "macro_soft_f1": macro_soft_f1, "macro_f1": macro_f1})
+# model_bce = tf.keras.models.load_model("DL_mobilenetV2_macro_soft_f1.keras", custom_objects={"KerasLayer": KerasLayerWrapper, "macro_soft_f1": macro_soft_f1, "macro_f1": macro_f1})
 
 # # 导入训练好的模型
-# model_bce = tf.keras.models.load_model("DL_VGG16_binary_crossentropy.keras")
+model_bce = tf.keras.models.load_model("DL_VGG16_binary_crossentropy.keras")
 
 # Get all label names
 label_names = mlb.classes_
@@ -245,5 +245,5 @@ result = grid_bce.loc[max_f1_rows]
 # 按照'f1'列进行降序排序
 max_perf = result.sort_values('f1', ascending=False)
 print(max_perf)
-max_perf.to_csv('file/threshold_mobilenetV2_macro_soft_f1.csv', index=False)
+max_perf.to_csv('file/threshold_10000.csv', index=False)
 

@@ -53,22 +53,24 @@ df['all_nouns'] = df['all_nouns'].apply(lambda s: [l for l in str(s).split(',') 
 print(df.head())
 print("Number of sample:", len(df))
 # 分成训练集和测试集
-X_train, X_val, y_train, y_val = train_test_split(df['stop_frame'], df['all_nouns'], test_size=0.2, random_state=44)
-print("Number of posters for training: ", len(X_train))
+# X_train, X_val, y_train, y_val = train_test_split(df['stop_frame'], df['all_nouns'], test_size=0.2, random_state=44)
+X_val = df['stop_frame']
+y_val = df['all_nouns']
+# print("Number of posters for training: ", len(X_train))
 print("Number of posters for validation: ", len(X_val))
 # 把每个图片的路径前面都加上data/使路径变得完整
-X_train = [os.path.join('data', str(f)) for f in X_train]
+# X_train = [os.path.join('data', str(f)) for f in X_train]
 X_val = [os.path.join('data', str(f)) for f in X_val]
-print("X_train[:8]:", X_train[:8])
+print("X_train[:8]:", X_val[:8])
 # 把标签数据变成list的格式
-y_train = list(y_train)
+# y_train = list(y_train)
 y_val = list(y_val)
-print("y_train[:8]:", y_train[:8])
+print("y_train[:8]:", y_val[:8])
 
 # Fit the multi-label binarizer on the training set 在训练集上拟合多标签二值化器
 # 构建一个mlb实例
 mlb = MultiLabelBinarizer()
-mlb.fit(y_train)
+mlb.fit(y_val)
 # 将label从string映射成数字
 
 print("Labels:")
@@ -78,16 +80,16 @@ for (i, label) in enumerate(mlb.classes_):
     print("{}. {}".format(i, label))
 
 # 用mlb处理train和val的标签数据，将其转换成二进制的向量,格式为一维数组
-y_train_bin = mlb.transform(y_train)
+# y_train_bin = mlb.transform(y_train)
 y_val_bin = mlb.transform(y_val)
-print("y_train_bin.shape:", y_train_bin.shape)
+# print("y_train_bin.shape:", y_train_bin.shape)
 print("y_val_bin.shape:", y_val_bin.shape)
 
 # Print example of movie posters and their binary targets
 for i in range(3):
-    print(X_train[i], y_train_bin[i])
+    print(X_val[i], y_val_bin[i])
 
-IMG_SIZE = 100  # Specify height and width of image to match the input format of the model
+IMG_SIZE = 200  # Specify height and width of image to match the input format of the model
 CHANNELS = 3  # Keep RGB color channels to match the input format of the model
 
 
@@ -108,7 +110,7 @@ def parse_function(filename, label):
     return image_normalized, label
 
 
-BATCH_SIZE = 8  # Big enough to measure an F1-score
+BATCH_SIZE = 2  # Big enough to measure an F1-score
 AUTOTUNE = tf.data.experimental.AUTOTUNE  # Adapt preprocessing and prefetching dynamically
 SHUFFLE_BUFFER_SIZE = 1024  # Shuffle the training data by a chunck of 1024 observations
 
@@ -140,11 +142,11 @@ def create_dataset(filenames, labels, is_training=True):
     return dataset
 
 
-train_ds = create_dataset(X_train, y_train_bin)
+# train_ds = create_dataset(X_train, y_train_bin)
 val_ds = create_dataset(X_val, y_val_bin)
 
 # 导入训练好的模型
-model_bce = tf.keras.models.load_model("DL_VGG16_binary_crossentropy.keras")
+model_bce = tf.keras.models.load_model("DL_VGG16_binary_crossentropy_200.keras")
 
 # # 选择图片
 # img_path = X_val[0]
@@ -164,7 +166,7 @@ model_bce = tf.keras.models.load_model("DL_VGG16_binary_crossentropy.keras")
 
 # Generate prediction
 # prediction = (predict > 0.5).astype('int')
-d = pd.read_csv("file/threshold_10000.csv")
+d = pd.read_csv("file/threshold_10000_200.csv")
 threshold = d['threshold']
 output_folder = "output"
 
@@ -268,46 +270,46 @@ dataf = pd.DataFrame({
     # 'label_boolean': y_val_bin_str,
     'predictive_noun': prediction_noun_list,
     'label_noun': y_val_str,
-    'p_1_bowl': p_number_1,
-    'p_1_threshold': [str(threshold[0]) for _ in range(len(X_val))],
-    'p_2_cloth': p_number_2,
-    'p_2_threshold': [str(threshold[1]) for _ in range(len(X_val))],
-    'p_3_container': p_number_3,
-    'p_3_threshold': [str(threshold[2]) for _ in range(len(X_val))],
-    'p_4_cupboard': p_number_4,
-    'p_4_threshold': [str(threshold[3]) for _ in range(len(X_val))],
-    'p_5_dough': p_number_5,
-    'p_5_threshold': [str(threshold[4]) for _ in range(len(X_val))],
-    'p_6_drawer': p_number_6,
-    'p_6_threshold': [str(threshold[5]) for _ in range(len(X_val))],
-    'p_7_fork': p_number_7,
-    'p_7_threshold': [str(threshold[6]) for _ in range(len(X_val))],
-    'p_8_fridge': p_number_8,
-    'p_8_threshold': [str(threshold[7]) for _ in range(len(X_val))],
-    'p_9_glass': p_number_9,
-    'p_9_threshold': [str(threshold[8]) for _ in range(len(X_val))],
-    'p_10_hand': p_number_10,
-    'p_10_threshold': [str(threshold[9]) for _ in range(len(X_val))],
-    'p_11_knife': p_number_11,
-    'p_11_threshold': [str(threshold[10]) for _ in range(len(X_val))],
-    'p_12_lid': p_number_12,
-    'p_12_threshold': [str(threshold[11]) for _ in range(len(X_val))],
-    'p_13_meat': p_number_13,
-    'p_13_threshold': [str(threshold[12]) for _ in range(len(X_val))],
-    'p_14_onion': p_number_14,
-    'p_14_threshold': [str(threshold[13]) for _ in range(len(X_val))],
-    'p_15_pan': p_number_15,
-    'p_15_threshold': [str(threshold[14]) for _ in range(len(X_val))],
-    'p_16_plate': p_number_16,
-    'p_16_threshold': [str(threshold[15]) for _ in range(len(X_val))],
-    'p_17_spatula': p_number_17,
-    'p_17_threshold': [str(threshold[16]) for _ in range(len(X_val))],
-    'p_18_sponge': p_number_18,
-    'p_18_threshold': [str(threshold[17]) for _ in range(len(X_val))],
-    'p_19_spoon': p_number_19,
-    'p_19_threshold': [str(threshold[18]) for _ in range(len(X_val))],
-    'p_20_tap': p_number_20,
-    'p_20_threshold': [str(threshold[19]) for _ in range(len(X_val))]
+    'bowl': p_number_1,
+    'bowl_threshold': [str(threshold[0]) for _ in range(len(X_val))],
+    'cloth': p_number_2,
+    'cloth_threshold': [str(threshold[1]) for _ in range(len(X_val))],
+    'container': p_number_3,
+    'container_threshold': [str(threshold[2]) for _ in range(len(X_val))],
+    'cupboard': p_number_4,
+    'cupboard_threshold': [str(threshold[3]) for _ in range(len(X_val))],
+    'dough': p_number_5,
+    'dough_threshold': [str(threshold[4]) for _ in range(len(X_val))],
+    'drawer': p_number_6,
+    'drawer_threshold': [str(threshold[5]) for _ in range(len(X_val))],
+    'fork': p_number_7,
+    'fork_threshold': [str(threshold[6]) for _ in range(len(X_val))],
+    'fridge': p_number_8,
+    'fridge_threshold': [str(threshold[7]) for _ in range(len(X_val))],
+    'glass': p_number_9,
+    'glass_threshold': [str(threshold[8]) for _ in range(len(X_val))],
+    'hand': p_number_10,
+    'hand_threshold': [str(threshold[9]) for _ in range(len(X_val))],
+    'knife': p_number_11,
+    'knife_threshold': [str(threshold[10]) for _ in range(len(X_val))],
+    'lid': p_number_12,
+    'lid_threshold': [str(threshold[11]) for _ in range(len(X_val))],
+    'meat': p_number_13,
+    'meat_threshold': [str(threshold[12]) for _ in range(len(X_val))],
+    'onion': p_number_14,
+    'onion_threshold': [str(threshold[13]) for _ in range(len(X_val))],
+    'pan': p_number_15,
+    'pan_threshold': [str(threshold[14]) for _ in range(len(X_val))],
+    'plate': p_number_16,
+    'plate_threshold': [str(threshold[15]) for _ in range(len(X_val))],
+    'spatula': p_number_17,
+    'spatula_threshold': [str(threshold[16]) for _ in range(len(X_val))],
+    'sponge': p_number_18,
+    'sponge_threshold': [str(threshold[17]) for _ in range(len(X_val))],
+    'spoon': p_number_19,
+    'spoon_threshold': [str(threshold[18]) for _ in range(len(X_val))],
+    'tap': p_number_20,
+    'tap_threshold': [str(threshold[19]) for _ in range(len(X_val))]
 })
 
 print(dataf)
