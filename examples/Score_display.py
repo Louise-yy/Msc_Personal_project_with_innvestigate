@@ -32,7 +32,7 @@ for number in top_10_values:
 
 # 创建新的dataframe
 data = pd.DataFrame({'Category': categorys,
-                       'Value': top_10_values})
+                     'Value': top_10_values})
 print(data)
 # 读取file2.csv
 file2_path = 'file/threshold_10000.csv'
@@ -66,14 +66,14 @@ plt.ylim(-0.5, len(data) - 0.5)
 
 # 在每个条形上添加垂直的红线
 for i, red_line in enumerate(thresholds):
-    ymin = 0.05 + i*0.1 - 0.05
-    ymax = 0.05 + i*0.1 + 0.05
-    plt.axvline(x=red_line, ymin=ymin, ymax=ymax, color='red', linewidth=1.5)
-
+    ymin = 0.05 + i * 0.1 - 0.05
+    ymax = 0.05 + i * 0.1 + 0.05
+    plt.axvline(x=red_line, ymin=ymin, ymax=ymax, color='red', linewidth=2)
 
 # 设置x轴标签、y轴标签和图表标题
 # plt.xlabel('Value')
 # plt.ylabel('Category')
 # plt.title('Horizontal Bar Chart')
-
+plt.grid(True)
+plt.gca().set_axisbelow(True)
 plt.show()

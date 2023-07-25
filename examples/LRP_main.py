@@ -11,6 +11,8 @@ import tempfile
 import tensorflow_hub as hub
 import matplotlib.pyplot as plot
 import tensorflow.keras as keras
+import cv2
+import numpy as np
 
 from keras.applications import VGG16
 from datetime import datetime
@@ -191,61 +193,64 @@ model_bce = tf.keras.models.load_model("DL_VGG16_binary_crossentropy_200.keras")
 # model_bce = tf.keras.models.load_model("macro_soft_f1.keras", custom_objects={"KerasLayer": KerasLayerWrapper, "macro_soft_f1": macro_soft_f1, "macro_f1": macro_f1})
 
 
+file = pd.read_csv("output/prediction_cupboard_pan.csv")
+image_path = file['frame'][900:924]
+output_folder = "output"
 
-# 从测试集中取第一个图片出来，对它进行处理
-filename = "data/P02_108_10617.jpg"
-# Read an image from a file
-image_string = tf.io.read_file(filename)
-# Decode it into a dense vector 解码后的图像数据是一个张量
-image_decoded = tf.image.decode_jpeg(image_string, channels=CHANNELS)
-# Resize it to fixed shape
-image_resized = tf.image.resize(image_decoded, [IMG_SIZE, IMG_SIZE])
-# Normalize it from [0, 255] to [0.0, 1.0]
-image_normalized = image_resized / 255.0
-# 把图片的shape从(100,100,3)转换为(1,100,100,3)是为了符合模型的输入形状
-image_normalized_expanded = tf.expand_dims(image_normalized, axis=0)
+for file_path in image_path:  # ###############################
+    file_path = "data/P01_102_10053.jpg"
+    # 取一个图片出来，对它进行处理
+    image_string = tf.io.read_file(file_path)
+    # 解码图像，变成张量
+    image_decoded = tf.image.decode_jpeg(image_string, channels=CHANNELS)
+    # Resize it to fixed shape
+    image_resized = tf.image.resize(image_decoded, [IMG_SIZE, IMG_SIZE])
+    # Normalize it from [0, 255] to [0.0, 1.0]
+    image_normalized = image_resized / 255.0
+    # 把图片的shape从(100,100,3)转换为(1,100,100,3)是为了符合模型的输入形状
+    image_normalized_expanded = tf.expand_dims(image_normalized, axis=0)
 
-# 展示测试集的第一张图片
-print("filename: ", filename)
-image = Image.open(filename)
-image_resized = image.resize((100, 100))
-plot.imshow(image_resized, cmap="gray", interpolation="nearest")
-plot.show()
+    # 展示原图
+    print("filename: ", file_path)
+    image = Image.open(file_path)
+    image_resized = image.resize((300, 300))
+    # plot.imshow(image_resized, cmap="gray", interpolation="nearest")  # ####################
+    # plot.show()  # ####################
+    image_resized.save(os.path.join(output_folder, file_path))  # ####################
+    print(f"original image saved to：{os.path.join(output_folder, file_path)}")  # ####################
 
+    # Stripping the softmax activation from the model
+    model_wo_sm = innvestigate.model_wo_softmax(model_bce)
 
+    # Creating an analyzer and set neuron_selection_mode to "index"
+    channels_first = keras.backend.image_data_format() == "channels_first"
+    color_conversion = "BGRtoRGB"  # keras.applications use BGR format
+    input_range = [-1, 1]
+    noise_scale = (input_range[1] - input_range[0]) * 0.1
+    # analyzer = innvestigate.create_analyzer(
+    #     "input_t_gradient", model_wo_sm, neuron_selection_mode="index"
+    # )
+    analyzer = innvestigate.create_analyzer(
+        "lrp.alpha_2_beta_1", model_wo_sm, neuron_selection_mode="index"
+    )
 
-# Stripping the softmax activation from the model
-model_wo_sm = innvestigate.model_wo_softmax(model_bce)
+    for (i, label) in enumerate(mlb.classes_):
+        # Applying the analyzer and pass that we want
+        analysis = analyzer.analyze(image_normalized_expanded, i)
+        # Apply common postprocessing, e.g., re-ordering the channels for plotting.
+        analysis = imagenetutils.postprocess(analysis, color_conversion, channels_first)
+        # Apply analysis postprocessing, e.g., creating a heatmap.
+        analysis = imagenetutils.heatmap(analysis)
 
-# Creating an analyzer and set neuron_selection_mode to "index"
-channels_first = keras.backend.image_data_format() == "channels_first"
-color_conversion = "BGRtoRGB"  # keras.applications use BGR format
-input_range = [-1, 1]
-noise_scale = (input_range[1] - input_range[0]) * 0.1
-analyzer = innvestigate.create_analyzer(
-    "input_t_gradient", model_wo_sm, neuron_selection_mode="index"
-)
-# analyzer = innvestigate.create_analyzer(
-#     "lrp.sequential_preset_a_flat", model_wo_sm, epsilon=1, neuron_selection_mode="index"
-# )
-# a = analyzer.analyze(image_normalized_expanded, 64)
-# # Apply common postprocessing, e.g., re-ordering the channels for plotting. 调整channels的顺序
-# a = imagenetutils.postprocess(a, color_conversion, channels_first)
-# # Apply analysis postprocessing, e.g., creating a heatmap.
-# a = imagenetutils.graymap(a)
-# plot.imshow(a[0], cmap="seismic", interpolation="nearest")
-# plot.show()
-
-for (i, label) in enumerate(mlb.classes_):
-    print("Analysis w.r.t. to neuron", label)
-    # Applying the analyzer and pass that we want
-    analysis = analyzer.analyze(image_normalized_expanded, i)
-    # Apply common postprocessing, e.g., re-ordering the channels for plotting.
-    analysis = imagenetutils.postprocess(analysis, color_conversion, channels_first)
-    # Apply analysis postprocessing, e.g., creating a heatmap.
-    analysis = imagenetutils.heatmap(analysis)
-
-    # Displaying the gradient
-    # analysis_add = analysis + 1
-    plot.imshow(analysis[0], cmap="seismic", interpolation="nearest")
-    plot.show()
+        if label in ['cupboard', 'pan']:
+            print("Analysis w.r.t. to neuron", label)
+            # plot.imshow(analysis[0], cmap="seismic", interpolation="nearest")  # ####################
+            # plot.show()  # ####################
+            # 将float32数组转换为uint8类型，映射值到0到255的范围
+            heatmap_array = (analysis[0] * 255).astype(np.uint8)
+            # 设置新的文件名
+            filename_without_ext = os.path.splitext(os.path.basename(file_path))[0]
+            new_filename = f"data/{filename_without_ext}_{label}.jpg"
+            # 保存为JPG格式的图像
+            cv2.imwrite(os.path.join(output_folder, new_filename), heatmap_array)  # ####################
+            print(f"heat_map saved to：{os.path.join(output_folder, new_filename)}")  # ####################

@@ -1,3 +1,4 @@
+# 取prediction.csv中的跟cupboard和pan有关的数据
 import pandas as pd
 
 # 读取CSV文件

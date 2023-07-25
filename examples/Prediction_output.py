@@ -1,4 +1,4 @@
-# 产图的
+# 得到prediction.csv
 import os
 import warnings
 import logging
@@ -173,9 +173,9 @@ output_folder = "output"
 
 def get_per_prediction(img_path):
     print("img_path: ", img_path)
-    i = image.load_img(img_path, target_size=(200, 200, CHANNELS))
-    i.save(os.path.join(output_folder, img_path))
-    print(f"imgae saved to：{os.path.join(output_folder, img_path)}")
+    # i = image.load_img(img_path, target_size=(200, 200, CHANNELS))
+    # i.save(os.path.join(output_folder, img_path))
+    # print(f"imgae saved to：{os.path.join(output_folder, img_path)}")
     img = image.load_img(img_path, target_size=(IMG_SIZE, IMG_SIZE, CHANNELS))
     img = image.img_to_array(img)
     img = img / 255
