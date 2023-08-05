@@ -249,7 +249,7 @@ label_names = mlb.classes_
 # Performance table with the second model (binary cross-entropy loss)
 grid_bce = perf_grid(train_ds, y_train_bin, label_names, model_bce)
 print(grid_bce.head(20))
-# grid_bce.to_csv('file/grid_bce.csv', index=False)
+grid_bce.to_csv('file/grid_bce.csv', index=False)
 
 
 # 按照'id', 'label', 'freq'进行分组，计算'f1'列的最大值

@@ -163,7 +163,6 @@ model_bce = tf.keras.models.load_model("DL_VGG16_binary_crossentropy_200.keras")
 # im = Image.open(img_path)
 
 
-
 # Generate prediction
 # prediction = (predict > 0.5).astype('int')
 d = pd.read_csv("file/threshold_10000_200.csv")
@@ -271,50 +270,48 @@ dataf = pd.DataFrame({
     'predictive_noun': prediction_noun_list,
     'label_noun': y_val_str,
     'bowl': p_number_1,
-    'bowl_threshold': [str(threshold[0]) for _ in range(len(X_val))],
+    'bowl_threshold': [str(d.loc[d['id'] == 0, 'threshold'].values[0]) for _ in range(len(X_val))],
     'cloth': p_number_2,
-    'cloth_threshold': [str(threshold[1]) for _ in range(len(X_val))],
+    'cloth_threshold': [str(d.loc[d['id'] == 1, 'threshold'].values[0]) for _ in range(len(X_val))],
     'container': p_number_3,
-    'container_threshold': [str(threshold[2]) for _ in range(len(X_val))],
+    'container_threshold': [str(d.loc[d['id'] == 2, 'threshold'].values[0]) for _ in range(len(X_val))],
     'cupboard': p_number_4,
-    'cupboard_threshold': [str(threshold[3]) for _ in range(len(X_val))],
+    'cupboard_threshold': [str(d.loc[d['id'] == 3, 'threshold'].values[0]) for _ in range(len(X_val))],
     'dough': p_number_5,
-    'dough_threshold': [str(threshold[4]) for _ in range(len(X_val))],
+    'dough_threshold': [str(d.loc[d['id'] == 4, 'threshold'].values[0]) for _ in range(len(X_val))],
     'drawer': p_number_6,
-    'drawer_threshold': [str(threshold[5]) for _ in range(len(X_val))],
+    'drawer_threshold': [str(d.loc[d['id'] == 5, 'threshold'].values[0]) for _ in range(len(X_val))],
     'fork': p_number_7,
-    'fork_threshold': [str(threshold[6]) for _ in range(len(X_val))],
+    'fork_threshold': [str(d.loc[d['id'] == 6, 'threshold'].values[0]) for _ in range(len(X_val))],
     'fridge': p_number_8,
-    'fridge_threshold': [str(threshold[7]) for _ in range(len(X_val))],
+    'fridge_threshold': [str(d.loc[d['id'] == 7, 'threshold'].values[0]) for _ in range(len(X_val))],
     'glass': p_number_9,
-    'glass_threshold': [str(threshold[8]) for _ in range(len(X_val))],
+    'glass_threshold': [str(d.loc[d['id'] == 8, 'threshold'].values[0]) for _ in range(len(X_val))],
     'hand': p_number_10,
-    'hand_threshold': [str(threshold[9]) for _ in range(len(X_val))],
+    'hand_threshold': [str(d.loc[d['id'] == 9, 'threshold'].values[0]) for _ in range(len(X_val))],
     'knife': p_number_11,
-    'knife_threshold': [str(threshold[10]) for _ in range(len(X_val))],
+    'knife_threshold': [str(d.loc[d['id'] == 10, 'threshold'].values[0]) for _ in range(len(X_val))],
     'lid': p_number_12,
-    'lid_threshold': [str(threshold[11]) for _ in range(len(X_val))],
+    'lid_threshold': [str(d.loc[d['id'] == 11, 'threshold'].values[0]) for _ in range(len(X_val))],
     'meat': p_number_13,
-    'meat_threshold': [str(threshold[12]) for _ in range(len(X_val))],
+    'meat_threshold': [str(d.loc[d['id'] == 12, 'threshold'].values[0]) for _ in range(len(X_val))],
     'onion': p_number_14,
-    'onion_threshold': [str(threshold[13]) for _ in range(len(X_val))],
+    'onion_threshold': [str(d.loc[d['id'] == 13, 'threshold'].values[0]) for _ in range(len(X_val))],
     'pan': p_number_15,
-    'pan_threshold': [str(threshold[14]) for _ in range(len(X_val))],
+    'pan_threshold': [str(d.loc[d['id'] == 14, 'threshold'].values[0]) for _ in range(len(X_val))],
     'plate': p_number_16,
-    'plate_threshold': [str(threshold[15]) for _ in range(len(X_val))],
+    'plate_threshold': [str(d.loc[d['id'] == 15, 'threshold'].values[0]) for _ in range(len(X_val))],
     'spatula': p_number_17,
-    'spatula_threshold': [str(threshold[16]) for _ in range(len(X_val))],
+    'spatula_threshold': [str(d.loc[d['id'] == 16, 'threshold'].values[0]) for _ in range(len(X_val))],
     'sponge': p_number_18,
-    'sponge_threshold': [str(threshold[17]) for _ in range(len(X_val))],
+    'sponge_threshold': [str(d.loc[d['id'] == 17, 'threshold'].values[0]) for _ in range(len(X_val))],
     'spoon': p_number_19,
-    'spoon_threshold': [str(threshold[18]) for _ in range(len(X_val))],
+    'spoon_threshold': [str(d.loc[d['id'] == 18, 'threshold'].values[0]) for _ in range(len(X_val))],
     'tap': p_number_20,
-    'tap_threshold': [str(threshold[19]) for _ in range(len(X_val))]
+    'tap_threshold': [str(d.loc[d['id'] == 19, 'threshold'].values[0]) for _ in range(len(X_val))]
 })
 
 print(dataf)
 
 # 保存 DataFrame 到 'result.csv'
 dataf.to_csv('output/prediction.csv', index=False)
-
-

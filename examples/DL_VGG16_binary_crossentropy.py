@@ -249,13 +249,28 @@ callbacks = [
 ]
 history_bce = model_bce.fit(train_ds,
                             epochs=EPOCHS,
-                            validation_data=create_dataset(X_val, y_val_bin),
-                            callbacks=callbacks)
+                            validation_data=create_dataset(X_val, y_val_bin))
+                            # callbacks=callbacks)
 # model_bce_losses, model_bce_val_losses, model_bce_macro_f1s, model_bce_val_macro_f1s = learning_curves(history_bce)
 # print("Macro soft-F1 loss: %.2f" %model_bce_val_losses[-1])
 # print("Macro F1-score: %.2f" %model_bce_val_macro_f1s[-1])
 # y_hat_val = model_bce.predict(train_ds)
 # print(y_hat_val)
+acc = history_bce.history['accuracy']
+val_acc = history_bce.history['val_accuracy']
+loss = history_bce.history['loss']
+val_loss = history_bce.history['val_loss']
+epochs = range(1, len(acc) + 1)
+plt.plot(epochs, acc, 'bo', label='Training accuracy')
+plt.plot(epochs, val_acc, 'b', label='Validation accuracy')
+plt.title('Training and validation accuracy')
+plt.legend()
+plt.figure()
+plt.plot(epochs, loss, 'bo', label='Training loss')
+plt.plot(epochs, val_loss, 'b', label='Validation loss')
+plt.title('Training and validation loss')
+plt.legend()
+plt.show()
 
 
 

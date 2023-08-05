@@ -7,7 +7,7 @@ file_path = 'output/prediction.csv'
 df = pd.read_csv(file_path)
 
 # 提取指定行
-target_row = df[df['frame'] == 'data/P01_102_10053.jpg']
+target_row = df[df['frame'] == 'data/P02_108_8459.jpg']
 
 # 取出列的数值并进行排序
 data_values = target_row[['bowl', 'cloth', 'container', 'cupboard', 'dough',
@@ -35,7 +35,7 @@ data = pd.DataFrame({'Category': categorys,
                      'Value': top_10_values})
 print(data)
 # 读取file2.csv
-file2_path = 'file/threshold_10000.csv'
+file2_path = 'file/threshold_10000_200.csv'
 df2 = pd.read_csv(file2_path)
 
 # # 合并两个dataframe并提取threshold列
@@ -60,20 +60,20 @@ print(thresholds)
 plt.figure(figsize=(16, 10))
 
 # 绘制横向条形图
-plt.barh(data['Category'], data['Value'])
+plt.barh(data['Category'], data['Value'], height=0.6)
 # plt.xlim(0.0, 10.0)
 plt.ylim(-0.5, len(data) - 0.5)
 
 # 在每个条形上添加垂直的红线
 for i, red_line in enumerate(thresholds):
-    ymin = 0.05 + i * 0.1 - 0.05
-    ymax = 0.05 + i * 0.1 + 0.05
-    plt.axvline(x=red_line, ymin=ymin, ymax=ymax, color='red', linewidth=2)
+    ymin = 0.05 + i * 0.1 - 0.04
+    ymax = 0.05 + i * 0.1 + 0.04
+    plt.axvline(x=red_line, ymin=ymin, ymax=ymax, color='red', linewidth=5)
 
-# 设置x轴标签、y轴标签和图表标题
-# plt.xlabel('Value')
-# plt.ylabel('Category')
-# plt.title('Horizontal Bar Chart')
+# 设置x轴和y轴的刻度标签字体大小
+plt.xticks(fontsize=35)
+plt.yticks(fontsize=35)
+
 plt.grid(True)
 plt.gca().set_axisbelow(True)
 plt.show()

@@ -106,7 +106,7 @@ print("y_val_bin.shape:", y_val_bin.shape)
 for i in range(3):
     print(X_train[i], y_train_bin[i])
 
-IMG_SIZE = 224  # ############1
+IMG_SIZE = 200  # ############1
 CHANNELS = 3  # Keep RGB color channels to match the input format of the model
 
 
@@ -215,14 +215,14 @@ def KerasLayerWrapper(*args, **kwargs):
 # model_bce = tf.keras.models.load_model("DL_mobilenetV2_macro_soft_f1.keras", custom_objects={"KerasLayer": KerasLayerWrapper, "macro_soft_f1": macro_soft_f1, "macro_f1": macro_f1})
 
 # # 导入训练好的模型
-model_bce = tf.keras.models.load_model("DL_VGG16_binary_crossentropy.keras")
+model_bce = tf.keras.models.load_model("DL_VGG16_binary_crossentropy_200.keras")
 
 # Get all label names
 label_names = mlb.classes_
 # Performance table with the second model (binary cross-entropy loss)
 grid_bce = perf_grid(train_ds, y_train_bin, label_names, model_bce)
 print(grid_bce.head(20))
-# grid_bce.to_csv('file/grid_bce.csv', index=False)
+grid_bce.to_csv('file/grid_bce.csv', index=False)
 
 # Get the maximum F1-score for each label when using the second model and varying the threshold
 # 按照'id', 'label', 'freq'进行分组，计算'f1'列的最大值
@@ -245,5 +245,5 @@ result = grid_bce.loc[max_f1_rows]
 # 按照'f1'列进行降序排序
 max_perf = result.sort_values('f1', ascending=False)
 print(max_perf)
-max_perf.to_csv('file/threshold_10000.csv', index=False)
+max_perf.to_csv('file/threshold_10000_200.csv', index=False)
 
